@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visualisation Triphasée - Banc de Test IRM</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+      :root {
+        --primary-color: #1a2a3a;
+        --secondary-color: #2ecc71;
+        --accent-color: #e74c3c;
+        --text-color: #ecf0f1;
+        --card-bg: #2c3e50;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: var(--primary-color);
+        color: var(--text-color);
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-gap: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        grid-column: 1 / -1;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .card {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      h1 {
+        color: var(--secondary-color);
+        margin: 0;
+      }
+
+      h2 {
+        color: var(--text-color);
+        border-bottom: 2px solid var(--secondary-color);
+        padding-bottom: 10px;
+        margin-top: 0;
+      }
+
+      #phase-plot {
+        height: 500px;
+      }
+
+      #vector-plot {
+        height: 500px;
+      }
+
+      .phase-info {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin-top: 20px;
+      }
+
+      .phase-card {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .phase-value {
+        font-size: 24px;
+        font-weight: bold;
+        margin: 5px 0;
+      }
+
+      .phase-unit {
+        font-size: 14px;
+        opacity: 0.8;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      button {
+        background-color: var(--secondary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s;
+      }
+
+      button:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard">
+      <div class="header">
+        <h1>Visualisation du Système Triphasé</h1>
+        <p>Banc de Test IRM - 220V par phase, déphasage 120°</p>
+      </div>
+
+      <div class="card">
+        <h2>Ondes Triphasées</h2>
+        <div id="phase-plot"></div>
+      </div>
+
+      <div class="card">
+        <h2>Représentation Vectorielle</h2>
+        <div id="vector-plot"></div>
+      </div>
+
+      <div class="card" style="grid-column: 1 / -1">
+        <h2>Mesures Instantanées</h2>
+        <div class="phase-info">
+          <div class="phase-card">
+            <div>Phase L1</div>
+            <div class="phase-value" id="l1-value">220.0</div>
+            <div class="phase-unit">Volts (V)</div>
+            <div id="l1-angle">0.0°</div>
+          </div>
+          <div class="phase-card">
+            <div>Phase L2</div>
+            <div class="phase-value" id="l2-value">220.0</div>
+            <div class="phase-unit">Volts (V)</div>
+            <div id="l2-angle">-120.0°</div>
+          </div>
+          <div class="phase-card">
+            <div>Phase L3</div>
+            <div class="phase-value" id="l3-value">220.0</div>
+            <div class="phase-unit">Volts (V)</div>
+            <div id="l3-angle">120.0°</div>
+          </div>
+        </div>
+        <div class="controls">
+          <button id="play-btn">▶️ Animation</button>
+          <button id="pause-btn">⏸ Pause</button>
+          <button id="reset-btn">↻ Réinitialiser</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Paramètres du système triphasé
+      const config = {
+        amplitude: 220 * Math.sqrt(2), // 220V efficaces → amplitude max
+        frequency: 50, // 50 Hz
+        phaseShift: (2 * Math.PI) / 3, // 120° en radians
+        timeRange: 0.04, // 2 périodes (1/50 * 2)
+        points: 500,
+        animationSpeed: 0.05,
+      };
+
+      // Données pour les plots
+      let time = [];
+      let V_L1 = [];
+      let V_L2 = [];
+      let V_L3 = [];
+      let animationId = null;
+      let currentTime = 0;
+
+      // Initialisation des données
+      function initData() {
+        time = Array.from(
+          { length: config.points },
+          (_, i) => (i / (config.points - 1)) * config.timeRange
+        );
+
+        updateWaveforms(0);
+      }
+
+      // Mise à jour des formes d'onde
+      function updateWaveforms(t) {
+        V_L1 = time.map(
+          (x) =>
+            config.amplitude * Math.sin(2 * Math.PI * config.frequency * x + t)
+        );
+        V_L2 = time.map(
+          (x) =>
+            config.amplitude *
+            Math.sin(2 * Math.PI * config.frequency * x - config.phaseShift + t)
+        );
+        V_L3 = time.map(
+          (x) =>
+            config.amplitude *
+            Math.sin(2 * Math.PI * config.frequency * x + config.phaseShift + t)
+        );
+
+        // Mise à jour des valeurs instantanées
+        const instantIndex = Math.floor((t * config.points) / (2 * Math.PI));
+        document.getElementById("l1-value").textContent =
+          V_L1[instantIndex].toFixed(1);
+        document.getElementById("l2-value").textContent =
+          V_L2[instantIndex].toFixed(1);
+        document.getElementById("l3-value").textContent =
+          V_L3[instantIndex].toFixed(1);
+
+        // Angles en degrés
+        const angle = (t * 180) / Math.PI;
+        document.getElementById("l1-angle").textContent = `${(
+          angle % 360
+        ).toFixed(1)}°`;
+        document.getElementById("l2-angle").textContent = `${(
+          (angle % 360) -
+          120
+        ).toFixed(1)}°`;
+        document.getElementById("l3-angle").textContent = `${(
+          (angle % 360) +
+          120
+        ).toFixed(1)}°`;
+      }
+
+      // Création du graphique des ondes
+      function createPhasePlot() {
+        const data = [
+          {
+            x: time,
+            y: V_L1,
+            name: "Phase L1",
+            line: { color: "#e74c3c", width: 2 },
+          },
+          {
+            x: time,
+            y: V_L2,
+            name: "Phase L2",
+            line: { color: "#2ecc71", width: 2 },
+          },
+          {
+            x: time,
+            y: V_L3,
+            name: "Phase L3",
+            line: { color: "#3498db", width: 2 },
+          },
+        ];
+
+        const layout = {
+          title: "Tensions Triphasées (50Hz, 120° de déphasage)",
+          xaxis: { title: "Temps (s)", gridcolor: "rgba(255,255,255,0.1)" },
+          yaxis: { title: "Tension (V)", gridcolor: "rgba(255,255,255,0.1)" },
+          plot_bgcolor: "rgba(0,0,0,0)",
+          paper_bgcolor: "rgba(0,0,0,0)",
+          font: { color: "white" },
+          showlegend: true,
+          legend: { orientation: "h" },
+        };
+
+        Plotly.newPlot("phase-plot", data, layout);
+      }
+
+      // Création du diagramme vectoriel
+      function createVectorPlot() {
+        const t = currentTime;
+        const vectors = [
+          {
+            type: "scatter",
+            mode: "lines+markers",
+            x: [0, Math.cos(t)],
+            y: [0, Math.sin(t)],
+            name: "L1",
+            line: { color: "#e74c3c", width: 4 },
+            marker: { size: 12 },
+          },
+          {
+            type: "scatter",
+            mode: "lines+markers",
+            x: [0, Math.cos(t - config.phaseShift)],
+            y: [0, Math.sin(t - config.phaseShift)],
+            name: "L2",
+            line: { color: "#2ecc71", width: 4 },
+            marker: { size: 12 },
+          },
+          {
+            type: "scatter",
+            mode: "lines+markers",
+            x: [0, Math.cos(t + config.phaseShift)],
+            y: [0, Math.sin(t + config.phaseShift)],
+            name: "L3",
+            line: { color: "#3498db", width: 4 },
+            marker: { size: 12 },
+          },
+        ];
+
+        const layout = {
+          title: "Diagramme Vectoriel (Représentation de Fresnel)",
+          xaxis: {
+            range: [-1.5, 1.5],
+            zeroline: false,
+            gridcolor: "rgba(255,255,255,0.1)",
+          },
+          yaxis: {
+            range: [-1.5, 1.5],
+            scaleanchor: "x",
+            gridcolor: "rgba(255,255,255,0.1)",
+          },
+          shapes: [
+            {
+              type: "circle",
+              xref: "x",
+              yref: "y",
+              x0: -1,
+              y0: -1,
+              x1: 1,
+              y1: 1,
+              line: { color: "rgba(255,255,255,0.3)" },
+            },
+          ],
+          plot_bgcolor: "rgba(0,0,0,0)",
+          paper_bgcolor: "rgba(0,0,0,0)",
+          font: { color: "white" },
+          showlegend: true,
+        };
+
+        Plotly.newPlot("vector-plot", vectors, layout);
+      }
+
+      // Animation
+      function animate() {
+        currentTime += config.animationSpeed;
+        updateWaveforms(currentTime);
+
+        // Mise à jour du graphique des ondes
+        Plotly.animate(
+          "phase-plot",
+          {
+            data: [{ y: V_L1 }, { y: V_L2 }, { y: V_L3 }],
+            traces: [0, 1, 2],
+          },
+          {
+            transition: { duration: 0 },
+            frame: { duration: 0 },
+          }
+        );
+
+        // Mise à jour du diagramme vectoriel
+        createVectorPlot();
+
+        animationId = requestAnimationFrame(animate);
+      }
+
+      // Événements
+      document.getElementById("play-btn").addEventListener("click", () => {
+        if (!animationId) {
+          animate();
+        }
+      });
+
+      document.getElementById("pause-btn").addEventListener("click", () => {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      });
+
+      document.getElementById("reset-btn").addEventListener("click", () => {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+        currentTime = 0;
+        updateWaveforms(currentTime);
+        createPhasePlot();
+        createVectorPlot();
+      });
+
+      // Initialisation
+      initData();
+      createPhasePlot();
+      createVectorPlot();
+    </script>
+  </body>
+</html>

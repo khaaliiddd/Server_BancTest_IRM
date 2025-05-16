@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monitoring IRM - Gestion des Alarmes</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"
+    ></script>
+    <script type="text/javascript">
+      (function () {
+        emailjs.init({
+          publicKey: "Q6UHXX1_mTTcLQq2R",
+        });
+      })();
+    </script>
+    <style>
+      :root {
+        --critical: #ff4757;
+        --warning: #eccc68;
+        --info: #1e90ff;
+        --normal: #2ed573;
+        --bg-dark: #1e1e2e;
+        --bg-light: #2a2a3a;
+        --text-light: #f1f2f6;
+        --header-gradient: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+        --card-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      body {
+        font-family: "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background-color: var(--bg-dark);
+        color: var(--text-light);
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .container {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      /* Header modernisé */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 30px;
+        background: linear-gradient(135deg, #0f0c29, #302b63);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        position: relative;
+        z-index: 10;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .logo img {
+        height: 40px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+      }
+
+      .logo h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      #settings-btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 30px;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(5px);
+        color: white;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      #settings-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+      }
+
+      /* Filter bar améliorée */
+      .filter-bar {
+        display: flex;
+        gap: 10px;
+        padding: 15px 30px;
+        background: var(--bg-light);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .filter-btn {
+        padding: 8px 20px;
+        border-radius: 30px;
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: white;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .filter-btn.active {
+        background: var(--info);
+        box-shadow: 0 4px 15px rgba(84, 160, 255, 0.3);
+      }
+
+      .filter-btn:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      /* Alarm container - Même structure mais plus moderne */
+      .alarm-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        padding: 20px 30px;
+        height: calc(100vh - 120px);
+        overflow: hidden;
+      }
+
+      .current-alarms,
+      .alarm-history {
+        background: var(--bg-light);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: var(--card-shadow);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .alarms-list {
+        flex: 1;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--info) var(--bg-dark);
+        padding-right: 5px;
+      }
+
+      .alarms-list::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .alarms-list::-webkit-scrollbar-track {
+        background: var(--bg-dark);
+        border-radius: 3px;
+      }
+
+      .alarms-list::-webkit-scrollbar-thumb {
+        background-color: var(--info);
+        border-radius: 3px;
+      }
+
+      /* Alarm card - Version améliorée */
+      .alarm-card {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.2);
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .alarm-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      .alarm-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+      }
+
+      .critical::before {
+        background: var(--critical);
+      }
+      .warning::before {
+        background: var(--warning);
+      }
+      .info::before {
+        background: var(--info);
+      }
+      .normal::before {
+        background: var(--normal);
+      }
+
+      .alarm-icon {
+        font-size: 1.5rem;
+        margin-right: 15px;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        flex-shrink: 0;
+        color: white;
+      }
+
+      .critical .alarm-icon {
+        background: var(--critical);
+      }
+      .warning .alarm-icon {
+        background: var(--warning);
+      }
+      .info .alarm-icon {
+        background: var(--info);
+      }
+      .normal .alarm-icon {
+        background: var(--normal);
+      }
+
+      .alarm-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .alarm-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+      }
+
+      .alarm-location {
+        display: inline-block;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        margin-right: 8px;
+        font-weight: 500;
+      }
+
+      .alarm-desc {
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+        word-break: break-word;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .alarm-time {
+        font-size: 0.8rem;
+        opacity: 0.8;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .alarm-actions {
+        display: flex;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+
+      .btn {
+        padding: 8px 12px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 40px;
+      }
+
+      .btn-ack {
+        background-color: var(--info);
+        color: white;
+      }
+
+      .btn-clear {
+        background-color: var(--warning);
+        color: white;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .section-title {
+        font-size: 1.2rem;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .section-title i {
+        font-size: 1.2rem;
+      }
+
+      .no-alarms {
+        text-align: center;
+        padding: 30px;
+        opacity: 0.7;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+      }
+
+      .no-alarms i {
+        font-size: 2.5rem;
+        opacity: 0.5;
+      }
+
+      @media (max-width: 768px) {
+        .alarm-container {
+          grid-template-columns: 1fr;
+          height: auto;
+        }
+
+        .header {
+          flex-direction: column;
+          text-align: center;
+          gap: 15px;
+          padding: 20px 15px;
+        }
+
+        .logo {
+          justify-content: center;
+        }
+
+        .filter-bar {
+          padding: 10px 15px;
+          flex-wrap: wrap;
+        }
+      }
+
+      /* Animation pour les nouvelles alarmes */
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.02);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .new-alarm {
+        animation: pulse 0.5s ease 2;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- STRUCTURE HTML EXACTEMENT IDENTIQUE À LA VOTRE -->
+    <div class="container">
+      <div class="header">
+        <div class="logo">
+          <img src="assets/imgs/signa.png" alt="IRM Logo" />
+          <h1>Monitoring IRM - Système d'Alarmes</h1>
+        </div>
+        <div>
+          <button id="settings-btn" class="btn">
+            <i class="fas fa-cog"></i> Paramètres
+          </button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all">Toutes</button>
+        <button class="filter-btn" data-filter="critical">Critiques</button>
+        <button class="filter-btn" data-filter="warning">Avertissements</button>
+        <button class="filter-btn" data-filter="info">Informations</button>
+      </div>
+
+      <div class="alarm-container">
+        <div class="current-alarms">
+          <h2 class="section-title">
+            <i class="fas fa-bell"></i> Alarmes Actives
+          </h2>
+          <div class="alarms-list" id="active-alarms-list">
+            <!-- Alarmes actives seront injectées ici par JS -->
+            <div class="no-alarms">
+              <i class="fas fa-bell-slash"></i>
+              <div>Aucune alarme active</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="alarm-history">
+          <h2 class="section-title">
+            <i class="fas fa-history"></i> Historique des Alarmes
+          </h2>
+          <div class="alarms-list" id="alarm-history-list">
+            <!-- Historique des alarmes sera injecté ici par JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Template pour une alarme - Modifié pour inclure la localisation -->
+    <template id="alarm-template">
+      <div class="alarm-card">
+        <div class="alarm-icon">
+          <i class="fas fa-bell"></i>
+        </div>
+        <div class="alarm-content">
+          <div class="alarm-title">
+            <span class="alarm-location">Cryostat - IRM #1</span>
+            <span>Titre de l'alarme</span>
+          </div>
+          <div class="alarm-desc">Description détaillée de l'alarme...</div>
+          <div class="alarm-time">
+            <i class="far fa-clock"></i>
+            <span>12/06/2023 14:30:45</span>
+          </div>
+        </div>
+        <div class="alarm-actions">
+          <button class="btn btn-ack"><i class="fas fa-check"></i></button>
+          <button class="btn btn-clear"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+    </template>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="alarms.js"></script>
+  </body>
+</html>

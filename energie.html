@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <script
+      type="module"
+      src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"
+    ></script>
+    <script
+      nomodule
+      src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"
+    ></script>
+    <title>Dashboard Énergie Triphasée</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- BON -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.min.js"></script>
+    <style>
+      :root {
+        --bg-dark: #0f172a;
+        --card-bg: #1e293b;
+        --primary: #3b82f6;
+        --danger: #ef4444;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --text: #f8fafc;
+      }
+
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: var(--bg-dark);
+        color: var(--text);
+        margin: 0;
+        padding: 20px;
+        min-height: 100vh;
+      }
+
+      .dashboard {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+      }
+
+      .logo img {
+        height: 50px;
+        margin-right: 15px;
+      }
+      h1 {
+        color: var(--primary);
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+
+      .graph-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .graph-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        transition: transform 0.3s ease;
+      }
+
+      .graph-card:hover {
+        transform: translateY(-5px);
+      }
+
+      h2 {
+        font-size: 1.3rem;
+        color: var(--primary);
+        margin-top: 0;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+      }
+
+      h2 ion-icon {
+        margin-right: 10px;
+      }
+
+      .plot-container {
+        height: 300px;
+      }
+
+      .pdf-section {
+        text-align: center;
+        margin-top: 40px;
+      }
+
+      .pdf-btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        transition: all 0.3s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .pdf-btn:hover {
+        background: #2563eb;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .pdf-btn ion-icon {
+        margin-right: 8px;
+        font-size: 1.2rem;
+      }
+
+      @media (max-width: 1200px) {
+        .graph-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard">
+      <div class="header">
+        <div class="logo">
+          <img src="assets/imgs/signa.png" alt="IRM Logo" />
+          <h1>Analyse Énergétique Triphasée</h1>
+        </div>
+      </div>
+
+      <!-- Première ligne : 3 graphiques -->
+      <div class="graph-grid">
+        <!-- Courants -->
+        <div class="graph-card">
+          <h2><ion-icon name="flash-outline"></ion-icon>Courants des Phases</h2>
+          <div class="plot-container" id="currentPlot"></div>
+        </div>
+
+        <!-- Tensions -->
+        <div class="graph-card">
+          <h2><ion-icon name="pulse-outline"></ion-icon>Tensions des Phases</h2>
+          <div class="plot-container" id="voltagePlot"></div>
+        </div>
+
+        <!-- Puissances -->
+        <div class="graph-card">
+          <h2><ion-icon name="speedometer-outline"></ion-icon>Puissances</h2>
+          <div class="plot-container" id="powerPlot"></div>
+        </div>
+      </div>
+
+      <!-- Deuxième ligne : 3 graphiques -->
+      <div class="graph-grid">
+        <!-- Cos Phi par phase -->
+        <div class="graph-card">
+          <h2>
+            <ion-icon name="bar-chart-outline"></ion-icon>Facteur de Puissance
+          </h2>
+          <div class="plot-container" id="cosPhiPlot"></div>
+        </div>
+
+        <!-- Harmoniques -->
+        <div class="graph-card">
+          <h2>
+            <ion-icon name="analytics-outline"></ion-icon>Harmoniques Courant
+          </h2>
+          <div class="plot-container" id="harmonicsPlot"></div>
+        </div>
+
+        <!-- Équilibre -->
+        <div class="graph-card">
+          <h2>
+            <ion-icon name="balance-outline"></ion-icon>Équilibre des Phases
+          </h2>
+          <div class="plot-container" id="balancePlot"></div>
+        </div>
+      </div>
+
+      <!-- Bouton PDF discret -->
+      <div class="pdf-section">
+        <button class="pdf-btn" onclick="generatePDF()">
+          <ion-icon name="document-text-outline"></ion-icon>
+          Générer Rapport PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+      // Données simulées réalistes pour système triphasé
+      const time = Array.from({ length: 60 }, (_, i) => i);
+
+      // Configuration du thème sombre amélioré
+      const darkTheme = {
+        paper_bgcolor: "#0f172a", // Fond plus sombre
+        plot_bgcolor: "#1e293b", // Zone de graphique
+        font: { color: "#e2e8f0" }, // Texte gris clair
+        xaxis: {
+          gridcolor: "#334155",
+          linecolor: "#475569",
+          zerolinecolor: "#475569",
+        },
+        yaxis: {
+          gridcolor: "#334155",
+          linecolor: "#475569",
+          zerolinecolor: "#475569",
+        },
+        margin: { t: 40, l: 60, r: 30, b: 60 },
+        legend: {
+          orientation: "h",
+          yanchor: "bottom",
+          y: 1.02,
+          xanchor: "right",
+          x: 1,
+        },
+      };
+
+      // Génération de données réalistes pour système triphasé
+      function generateRealisticData() {
+        // Valeurs de base réalistes
+        const baseCurrent = [85, 82, 88]; // Courants typiques L1, L2, L3
+        const baseVoltage = [230, 228, 232]; // Tensions typiques
+        const basePower = 150; // Puissance active de base
+
+        // Fluctuations réalistes
+        return {
+          I1: time.map((i) => {
+            // Variation lente + bruit haute fréquence
+            const slowVar = 0.8 * Math.sin(i / 10);
+            const noise = 2 * (Math.random() - 0.5);
+            return baseCurrent[0] + slowVar + noise;
+          }),
+          I2: time.map((i) => {
+            const slowVar = 0.6 * Math.sin(i / 8 + 2);
+            const noise = 3 * (Math.random() - 0.5);
+            return baseCurrent[1] + slowVar + noise;
+          }),
+          I3: time.map((i) => {
+            const slowVar = 0.7 * Math.sin(i / 12 + 1);
+            const noise = 2.5 * (Math.random() - 0.5);
+            return baseCurrent[2] + slowVar + noise;
+          }),
+
+          U1: time.map(
+            (i) => baseVoltage[0] + 2 * Math.sin(i / 15) + (Math.random() - 0.5)
+          ),
+          U2: time.map(
+            (i) =>
+              baseVoltage[1] +
+              1.8 * Math.sin(i / 15 + 1) +
+              (Math.random() - 0.5)
+          ),
+          U3: time.map(
+            (i) =>
+              baseVoltage[2] +
+              2.2 * Math.sin(i / 15 + 2) +
+              (Math.random() - 0.5)
+          ),
+
+          P: time.map(
+            (i) => basePower + 20 * Math.sin(i / 5) + 5 * (Math.random() - 0.5)
+          ),
+          Q: time.map(
+            (i) => 70 + 15 * Math.sin(i / 7) + 3 * (Math.random() - 0.5)
+          ),
+          S: time.map(
+            (i) => 165 + 25 * Math.sin(i / 6) + 4 * (Math.random() - 0.5)
+          ),
+
+          cosPhi1: time.map(
+            (i) => 0.92 + 0.03 * Math.sin(i / 8) + 0.01 * (Math.random() - 0.5)
+          ),
+          cosPhi2: time.map(
+            (i) => 0.9 + 0.04 * Math.sin(i / 9) + 0.01 * (Math.random() - 0.5)
+          ),
+          cosPhi3: time.map(
+            (i) => 0.93 + 0.02 * Math.sin(i / 7) + 0.01 * (Math.random() - 0.5)
+          ),
+
+          harmonics: {
+            h3: time.map(
+              (i) => 5 + 2 * Math.sin(i / 20) + 0.5 * (Math.random() - 0.5)
+            ),
+            h5: time.map(
+              (i) => 3 + 1.5 * Math.sin(i / 25) + 0.3 * (Math.random() - 0.5)
+            ),
+            h7: time.map(
+              (i) => 2 + 1 * Math.sin(i / 30) + 0.2 * (Math.random() - 0.5)
+            ),
+          },
+        };
+      }
+
+      const data = generateRealisticData();
+
+      // Configuration des courbes
+      const traceStyle = {
+        line: { width: 2 },
+        mode: "lines",
+      };
+
+      // 1. Courants - Couleurs améliorées pour thème sombre
+      Plotly.newPlot(
+        "currentPlot",
+        [
+          {
+            ...traceStyle,
+            y: data.I1,
+            name: "L1",
+            line: { color: "#f87171" }, // Rouge doux
+          },
+          {
+            ...traceStyle,
+            y: data.I2,
+            name: "L2",
+            line: { color: "#4ade80" }, // Vert doux
+          },
+          {
+            ...traceStyle,
+            y: data.I3,
+            name: "L3",
+            line: { color: "#60a5fa" }, // Bleu doux
+          },
+        ],
+        {
+          ...darkTheme,
+          xaxis: { title: "Temps (min)" },
+          yaxis: { title: "Courant (A)", range: [70, 100] },
+        }
+      );
+
+      // 2. Tensions
+      Plotly.newPlot(
+        "voltagePlot",
+        [
+          {
+            ...traceStyle,
+            y: data.U1,
+            name: "L1-N",
+            line: { color: "#f87171", dash: "dot" },
+          },
+          {
+            ...traceStyle,
+            y: data.U2,
+            name: "L2-N",
+            line: { color: "#4ade80", dash: "dot" },
+          },
+          {
+            ...traceStyle,
+            y: data.U3,
+            name: "L3-N",
+            line: { color: "#60a5fa", dash: "dot" },
+          },
+        ],
+        {
+          ...darkTheme,
+          xaxis: { title: "Temps (min)" },
+          yaxis: { title: "Tension (V)", range: [225, 235] },
+        }
+      );
+
+      // 3. Puissances
+      Plotly.newPlot(
+        "powerPlot",
+        [
+          {
+            ...traceStyle,
+            y: data.P,
+            name: "Active (P)",
+            line: { color: "#4ade80" },
+          },
+          {
+            ...traceStyle,
+            y: data.Q,
+            name: "Réactive (Q)",
+            line: { color: "#fbbf24" },
+          },
+          {
+            ...traceStyle,
+            y: data.S,
+            name: "Apparente (S)",
+            line: { color: "#60a5fa" },
+          },
+        ],
+        {
+          ...darkTheme,
+          xaxis: { title: "Temps (min)" },
+          yaxis: { title: "Puissance (kW/kVAR/kVA)" },
+        }
+      );
+
+      // 4. Cos Phi
+      Plotly.newPlot(
+        "cosPhiPlot",
+        [
+          {
+            ...traceStyle,
+            y: data.cosPhi1,
+            name: "L1",
+            line: { color: "#f87171" },
+          },
+          {
+            ...traceStyle,
+            y: data.cosPhi2,
+            name: "L2",
+            line: { color: "#4ade80" },
+          },
+          {
+            ...traceStyle,
+            y: data.cosPhi3,
+            name: "L3",
+            line: { color: "#60a5fa" },
+          },
+          {
+            ...traceStyle,
+            y: data.cosPhi1.map((_, i) => (data.P[i] / data.S[i]).toFixed(2)),
+            name: "Moyenne",
+            line: { color: "#a78bfa", width: 3 },
+          },
+        ],
+        {
+          ...darkTheme,
+          xaxis: { title: "Temps (min)" },
+          yaxis: { title: "Facteur de puissance", range: [0.85, 1] },
+        }
+      );
+
+      // 5. Harmoniques
+      Plotly.newPlot(
+        "harmonicsPlot",
+        [
+          {
+            ...traceStyle,
+            y: data.harmonics.h3,
+            name: "Harmonique 3",
+            line: { color: "#f87171" },
+          },
+          {
+            ...traceStyle,
+            y: data.harmonics.h5,
+            name: "Harmonique 5",
+            line: { color: "#4ade80" },
+          },
+          {
+            ...traceStyle,
+            y: data.harmonics.h7,
+            name: "Harmonique 7",
+            line: { color: "#60a5fa" },
+          },
+        ],
+        {
+          ...darkTheme,
+          xaxis: { title: "Temps (min)" },
+          yaxis: { title: "THD (%)", range: [0, 10] },
+        }
+      );
+
+      // 6. Équilibre
+      const balance = time.map(
+        (i) =>
+          Math.max(data.I1[i], data.I2[i], data.I3[i]) /
+          Math.min(data.I1[i], data.I2[i], data.I3[i])
+      );
+
+      Plotly.newPlot(
+        "balancePlot",
+        [
+          {
+            ...traceStyle,
+            y: balance.map((v) => v.toFixed(2)),
+            name: "Déséquilibre",
+            line: { color: "#f472b6" },
+            fill: "tozeroy",
+          },
+        ],
+        {
+          ...darkTheme,
+          xaxis: { title: "Temps (min)" },
+          yaxis: { title: "Ratio Max/Min", range: [1, 1.5] },
+          title: "Équilibre des Phases",
+        }
+      );
+
+      // Animation des données (simulation temps réel)
+      setInterval(() => {
+        const newData = generateRealisticData();
+
+        // Mise à jour progressive des graphiques
+        Plotly.animate(
+          "currentPlot",
+          {
+            data: [{ y: newData.I1 }, { y: newData.I2 }, { y: newData.I3 }],
+          },
+          {
+            transition: { duration: 800 },
+            frame: { duration: 800 },
+          }
+        );
+
+        Plotly.update("voltagePlot", {
+          y: [newData.U1, newData.U2, newData.U3],
+        });
+
+        Plotly.update("powerPlot", {
+          y: [newData.P, newData.Q, newData.S],
+        });
+
+        Plotly.update("cosPhiPlot", {
+          y: [
+            newData.cosPhi1,
+            newData.cosPhi2,
+            newData.cosPhi3,
+            newData.cosPhi1.map((_, i) =>
+              (newData.P[i] / newData.S[i]).toFixed(2)
+            ),
+          ],
+        });
+
+        Plotly.update("harmonicsPlot", {
+          y: [newData.harmonics.h3, newData.harmonics.h5, newData.harmonics.h7],
+        });
+
+        const newBalance = time.map(
+          (i) =>
+            Math.max(newData.I1[i], newData.I2[i], newData.I3[i]) /
+            Math.min(newData.I1[i], newData.I2[i], newData.I3[i])
+        );
+
+        Plotly.update("balancePlot", {
+          y: [newBalance.map((v) => v.toFixed(2))],
+        });
+      }, 2000); // Mise à jour toutes les 2 secondes
+
+      // ----------------function generatePDF()------------------------//
+      async function generatePDF() {
+        try {
+          // Initialisation jsPDF
+          window.jsPDF = window.jspdf.jsPDF;
+
+          if (typeof jsPDF === "undefined") {
+            throw new Error("jsPDF non détecté");
+          }
+
+          // Création du document
+          const doc = new jsPDF({
+            orientation: "portrait",
+            unit: "mm",
+            format: "a4",
+          });
+
+          // Style et couleurs
+          const primaryColor = [59, 130, 246]; // Bleu ONEE
+          const secondaryColor = [100, 100, 100];
+          const warningColor = [239, 68, 68]; // Rouge pour dépassements
+
+          // 1. En-tête avec logo
+          //const logoData = await loadImage("assets/imgs/signa.png");
+          //doc.addImage(logoData, "PNG", 15, 10, 40, 20);
+
+          // Informations ONEE
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(16);
+          doc.setTextColor(...primaryColor);
+          doc.text("ONEE - Branche Électricité", 140, 15, { align: "right" });
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.setTextColor(...secondaryColor);
+          doc.text("Boulevard Mohamed VI, Casablanca", 140, 20, {
+            align: "right",
+          });
+          doc.text("Tél: +212 522 459 000 | www.one.org.ma", 140, 25, {
+            align: "right",
+          });
+          doc.text("ICE: 000000000000000", 140, 30, { align: "right" });
+
+          // 2. Titre principal
+          doc.setFontSize(20);
+          doc.setTextColor(...primaryColor);
+          doc.text("RAPPORT ÉNERGÉTIQUE DÉTAILLÉ", 105, 45, {
+            align: "center",
+          });
+
+          // 3. Informations client
+          const clientY = 60;
+          doc.setFontSize(12);
+          doc.setTextColor(0, 0, 0);
+          doc.text("CLIENT:", 20, clientY);
+          doc.setFont("helvetica", "bold");
+          doc.text("Société Example SARL", 50, clientY);
+
+          doc.setFont("helvetica", "normal");
+          doc.text("Adresse: Rue Example, Casablanca", 50, clientY + 5);
+          doc.text("ICE: 000000000000000", 50, clientY + 10);
+          doc.text(
+            "Période: " +
+              new Date().toLocaleDateString("fr-FR", {
+                month: "long",
+                year: "numeric",
+              }),
+            50,
+            clientY + 15
+          );
+
+          // 4. Tableau de consommation mensuelle
+          const consoData = {
+            consoMois: 12500, // kWh
+            consoMoisPrecedent: 11800,
+            tarifMoyen: 1.35, // DH/kWh
+            puissanceSouscrite: 120, // kVA
+          };
+
+          const consoY = clientY + 25;
+          doc.setFontSize(14);
+          doc.setTextColor(...primaryColor);
+          doc.text("CONSOMMATION MENSUELLE", 20, consoY);
+
+          doc.autoTable({
+            startY: consoY + 5,
+            head: [["Paramètre", "Valeur", "Unité"]],
+            body: [
+              [
+                "Consommation du mois",
+                consoData.consoMois.toLocaleString("fr-FR"),
+                "kWh",
+              ],
+              [
+                "Consommation mois précédent",
+                consoData.consoMoisPrecedent.toLocaleString("fr-FR"),
+                "kWh",
+              ],
+              [
+                "Variation",
+                `${(
+                  ((consoData.consoMois - consoData.consoMoisPrecedent) /
+                    consoData.consoMoisPrecedent) *
+                  100
+                ).toFixed(1)}%`,
+                "",
+              ],
+              ["Puissance souscrite", consoData.puissanceSouscrite, "kVA"],
+              [
+                "Tarif moyen",
+                `${consoData.tarifMoyen.toFixed(2)} DH`,
+                "par kWh",
+              ],
+            ],
+            headStyles: {
+              fillColor: primaryColor,
+              textColor: [255, 255, 255],
+              fontStyle: "bold",
+            },
+            columnStyles: {
+              1: { cellWidth: 40, halign: "right" },
+            },
+          });
+
+          // 5. Tableau des tarifs ONEE appliqués
+          const tarifsY = doc.lastAutoTable.finalY + 10;
+          doc.setFontSize(14);
+          doc.setTextColor(...primaryColor);
+          doc.text("TARIFS ONEE APPLIQUÉS", 20, tarifsY);
+
+          const tarifsONEE = [
+            { plage: "0-100 kWh", prix: "1.05 DH" },
+            { plage: "101-200 kWh", prix: "1.20 DH" },
+            { plage: "201-500 kWh", prix: "1.35 DH" },
+            { plage: "501-1000 kWh", prix: "1.55 DH" },
+            { plage: "1001-2000 kWh", prix: "1.75 DH" },
+            { plage: ">2000 kWh", prix: "1.95 DH" },
+            { plage: "Puissance (>36 kVA)", prix: "120 DH/kVA" },
+          ];
+
+          doc.autoTable({
+            startY: tarifsY + 5,
+            head: [["Tranche de consommation", "Tarif HT"]],
+            body: tarifsONEE.map((t) => [t.plage, t.prix]),
+            headStyles: {
+              fillColor: secondaryColor,
+              textColor: [255, 255, 255],
+              fontStyle: "bold",
+            },
+            columnStyles: {
+              1: { halign: "right" },
+            },
+          });
+
+          // 6. Tableau des données techniques
+          const techY = doc.lastAutoTable.finalY + 10;
+          doc.setFontSize(14);
+          doc.setTextColor(...primaryColor);
+          doc.text("ANALYSE TECHNIQUE DÉTAILLÉE", 20, techY);
+
+          doc.autoTable({
+            startY: techY + 5,
+            head: [["Paramètre", "L1", "L2", "L3", "Moyenne", "Unité"]],
+            body: [
+              [
+                "Courant (A)",
+                data.I1[0].toFixed(1),
+                data.I2[0].toFixed(1),
+                data.I3[0].toFixed(1),
+                ((data.I1[0] + data.I2[0] + data.I3[0]) / 3).toFixed(1),
+                "A",
+              ],
+              [
+                "Tension (V)",
+                data.U1[0].toFixed(1),
+                data.U2[0].toFixed(1),
+                data.U3[0].toFixed(1),
+                ((data.U1[0] + data.U2[0] + data.U3[0]) / 3).toFixed(1),
+                "V",
+              ],
+              [
+                "Cos φ",
+                data.cosPhi1[0].toFixed(2),
+                data.cosPhi2[0].toFixed(2),
+                data.cosPhi3[0].toFixed(2),
+                (
+                  (data.cosPhi1[0] + data.cosPhi2[0] + data.cosPhi3[0]) /
+                  3
+                ).toFixed(2),
+                "",
+              ],
+              ["Puissance Active", "-", "-", "-", data.P[0].toFixed(1), "kW"],
+              [
+                "Puissance Réactive",
+                "-",
+                "-",
+                "-",
+                data.Q[0].toFixed(1),
+                "kVAR",
+              ],
+              [
+                "Puissance Apparente",
+                "-",
+                "-",
+                "-",
+                data.S[0].toFixed(1),
+                "kVA",
+              ],
+            ],
+            headStyles: {
+              fillColor: primaryColor,
+              textColor: [255, 255, 255],
+              fontStyle: "bold",
+            },
+            alternateRowStyles: {
+              fillColor: [240, 240, 240],
+            },
+          });
+
+          // 7. Analyse des coûts
+          const coutsY = doc.lastAutoTable.finalY + 10;
+          doc.setFontSize(14);
+          doc.setTextColor(...primaryColor);
+          doc.text("ANALYSE DES COÛTS", 20, coutsY);
+
+          const coutsData = {
+            coutEnergie: consoData.consoMois * consoData.tarifMoyen,
+            coutPuissance: consoData.puissanceSouscrite * 120, // 120 DH/kVA
+            tva: 0.1, // 10%
+          };
+          coutsData.totalHT = coutsData.coutEnergie + coutsData.coutPuissance;
+          coutsData.totalTTC = coutsData.totalHT * (1 + coutsData.tva);
+
+          doc.autoTable({
+            startY: coutsY + 5,
+            head: [["Désignation", "Montant (DH)"]],
+            body: [
+              ["Coût énergie (consommation)", coutsData.coutEnergie.toFixed(2)],
+              ["Coût puissance souscrite", coutsData.coutPuissance.toFixed(2)],
+              ["Total HT", coutsData.totalHT.toFixed(2)],
+              ["TVA (10%)", (coutsData.totalHT * coutsData.tva).toFixed(2)],
+              [
+                { content: "Total TTC", styles: { fontStyle: "bold" } },
+                {
+                  content: coutsData.totalTTC.toFixed(2) + " DH",
+                  styles: { fontStyle: "bold" },
+                },
+              ],
+            ],
+            headStyles: {
+              fillColor: secondaryColor,
+              textColor: [255, 255, 255],
+              fontStyle: "bold",
+            },
+            columnStyles: {
+              1: { halign: "right" },
+            },
+            bodyStyles: {
+              fontSize: 12,
+            },
+          });
+
+          // 8. Recommandations
+          const recoY = doc.lastAutoTable.finalY + 10;
+          doc.setFontSize(14);
+          doc.setTextColor(...primaryColor);
+          doc.text("RECOMMANDATIONS", 20, recoY);
+
+          const recommandations = [
+            "Optimiser la puissance souscrite en fonction des besoins réels",
+            "Améliorer le facteur de puissance (>0.95) pour éviter les pénalités",
+            "Étudier le passage en tarif heures creuses/heures pleines",
+            "Vérifier l'équilibrage des phases (déséquilibre actuel: " +
+              (
+                Math.max(data.I1[0], data.I2[0], data.I3[0]) /
+                Math.min(data.I1[0], data.I2[0], data.I3[0])
+              ).toFixed(2) +
+              ")",
+          ];
+
+          doc.setFontSize(11);
+          doc.setTextColor(0, 0, 0);
+          recommandations.forEach((item, i) => {
+            doc.text(`• ${item}`, 25, recoY + 10 + i * 5);
+          });
+
+          // 9. Pied de page
+          const finalY = recoY + 10 + recommandations.length * 5 + 5;
+          doc.setDrawColor(...secondaryColor);
+          doc.setLineWidth(0.5);
+          doc.line(20, finalY, 190, finalY);
+
+          doc.setFontSize(10);
+          doc.setTextColor(...secondaryColor);
+          doc.text(
+            "Document généré automatiquement le " +
+              new Date().toLocaleDateString("fr-FR"),
+            20,
+            finalY + 5
+          );
+          doc.text(
+            "Service Clientèle: contact@one.ma | Tel: 0800 00 00 00",
+            105,
+            finalY + 5,
+            { align: "center" }
+          );
+          doc.text("Page 1/1", 190, finalY + 5, { align: "right" });
+
+          // 10. Sauvegarde
+          const fileName = `Rapport_ONE_${new Date()
+            .toISOString()
+            .slice(0, 10)}.pdf`;
+          doc.save(fileName);
+        } catch (error) {
+          console.error("Erreur:", error);
+          alert("Erreur de génération: " + error.message);
+        }
+      }
+
+      // Fonction pour charger les images
+      function loadImage(url) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "Anonymous";
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL("image/png"));
+          };
+          img.onerror = (e) =>
+            reject(new Error(`Erreur chargement image: ${url}`));
+          img.src = url;
+        });
+      }
+    </script>
+  </body>
+</html>

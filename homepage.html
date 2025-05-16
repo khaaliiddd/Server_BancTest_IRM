@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MRI Test Bench</title>
+    <!-- ======= Styles ====== -->
+    <link rel="stylesheet" href="assets/css/style.css" />
+    <script> if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('alarms-worker.js')
+          .then(registration => {
+              registration.active.postMessage('startMonitoring');
+          });
+  }</script>
+    <!-- <script>
+   // 1. Vérifie d'abord le marqueur "persistant" (évite la boucle)
+if (localStorage.getItem('auth_persist') !== 'true') {
+  window.location.href = "login.html";
+  return;
+}
+
+// 2. Ensuite, vérifie le token temporaire
+const urlToken = new URLSearchParams(window.location.search).get('token');
+const storedToken = sessionStorage.getItem('auth_token');
+
+if (!urlToken || urlToken !== storedToken) {
+  window.location.href = "login.html";
+} else {
+  // 3. Nettoie l'URL (optionnel mais propre)
+  history.replaceState({}, '', window.location.pathname);
+  
+  // 4. La page s'affiche normalement 🎉
+  console.log("Accès autorisé !");
+}
+    </script> -->
+    
+    <style>
+      :root {
+        --primary-color: #2a1095;
+        --secondary-color: #fc9309;
+        --accent-color: #e74c3c;
+        --text-color: #ecf0f1;
+        --card-bg: #2a1095;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: var(--primary-color);
+        color: var(--text-color);
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-gap: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        grid-column: 1 / -1; /* Prend toute la largeur du grid container */
+        text-align: center;
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 2px solid #3498db;
+        border-radius: 8px;
+        background-color: rgba(52, 152, 219, 0.1);
+      }
+
+      .card {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      h1 {
+        color: var(--secondary-color);
+        margin: 0;
+      }
+
+      h2 {
+        color: var(--text-color);
+        border-bottom: 2px solid var(--secondary-color);
+        padding-bottom: 10px;
+        margin-top: 0;
+      }
+
+      #phase-plot {
+        height: 400px;
+        width: 100%;
+      }
+
+      #vector-plot {
+        height: 400px;
+        width: 100%;
+      }
+
+      .phase-info {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin-top: 20px;
+      }
+
+      .phase-card {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .phase-value {
+        font-size: 24px;
+        font-weight: bold;
+        margin: 5px 0;
+      }
+
+      .phase-unit {
+        font-size: 14px;
+        opacity: 0.8;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      /* Ajouts CSS */
+      .power-card, .phase-diff-card {
+    flex: 1;
+    min-width: 300px;
+    margin: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.power-grid, .phase-diff-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    align-items: center;
+}
+
+.power-grid > div:nth-child(odd),
+.phase-diff-grid > div:nth-child(odd) {
+    text-align: right;
+    opacity: 0.8;
+    padding-right: 10px;
+}
+
+@media (max-width: 768px) {
+    .power-card, .phase-diff-card {
+        width: 100%;
+        margin: 10px 0;
+    }
+}
+      /* Ajouts CSS */
+
+      button {
+        background-color: var(--secondary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s;
+      }
+
+      button:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+      }
+
+      /* Conserver le style existant et ajouter ces modifications */
+.iconBx {
+    position: relative;
+    width: 100px;  /* Taille réduite */
+    height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* Cache les débordements */
+    border-radius: 12px; /* Coins arrondis */
+    background: rgba(255,255,255,0.1); /* Fond légèrement visible */
+    transition: all 0.3s ease;
+}
+
+.custom-icon {
+    width: 80%; /* Remplit 80% du container */
+    height: 80%;
+    object-fit: contain; /* Garde les proportions */
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); /* Ombre portée */
+    padding: 5px; /* Espace interne */
+}
+
+/* Animation au survol */
+.iconBx:hover {
+    transform: scale(1.05);
+    background: rgba(46, 204, 113, 0.1);
+}
+
+.iconBx:hover .custom-icon {
+    filter: drop-shadow(0 4px 8px rgba(46, 204, 113, 0.3));
+}
+
+/* Version mobile */
+@media (max-width: 768px) {
+    .iconBx {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .custom-icon {
+        width: 75%;
+        height: 75%;
+    }
+}
+/* ===================== Main ===================== */
+.header-container {
+    width: clamp(100px, 50%, 1300px); /* Largeur entre 300px et 600px */
+    height: auto;
+    min-height: 15vh; /* Hauteur minimum relative à l'écran */
+    margin: 2rem auto;
+    padding: 1.5vmin;
+    border-radius: 2vw; /* Arrondi relatif à la largeur */
+    background: linear-gradient(145deg, #2a1095 0%, #1a1a4a 100%);
+    box-shadow: 0 1vmin 2vmin rgba(0,0,0,0.2);
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.header-content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 3vmin;
+    padding: 2vmin;
+}
+
+.header-image {
+    width: clamp(120px, 30%, 200px); /* Largeur image adaptive */
+    height: auto;
+    aspect-ratio: 1; /* Carré parfait */
+    object-fit: cover;
+}
+
+@media (hover: hover) {
+    .header-container:hover {
+        transform: scale(1.02);
+        box-shadow: 0 2vmin 3vmin rgba(0,0,0,0.3);
+    }
+}
+
+@media (max-width: 768px) {
+    .header-container {
+        min-height: 12vh;
+        width: 85%;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: 2vmin;
+    }
+    
+    .header-image {
+        width: 50%;
+    }
+}
+    </style>
+  </head>
+  <body>
+    <!-- =============== Navigation ================ -->
+    <div class="container">
+      <div class="navigation">
+        <ul>
+          <li>
+            <a href="#">
+                <span class="icon">
+                  <img src="assets/imgs/GEHC.png"  class="brand-icon">
+                </span>
+                <span class="title"></span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <span class="icon">
+                <ion-icon class="fas fa-gauge"></ion-icon >
+              </span>
+              <span class="title">Dashboard</span>
+            </a>
+          </li>
+
+          <li>
+            <a href="user.html">
+              <span class="icon">
+                <ion-icon class="fas fa-user"></ion-icon>
+              </span>
+              <span class="title">User</span>
+            </a>
+          </li>
+
+          <li>
+            <a href="alarms.html">
+              <span class="icon">
+                <ion-icon class="fas fa-bell"></ion-icon>
+                <span class="badge">3</span>
+              </span>
+              <span class="title">Alarms</span>
+            </a>
+          </li>
+
+          <li>
+            <a href="energie.html">
+              <span class="icon">
+                <ion-icon class="fas fa-bolt"></ion-icon>
+              </span>
+              <span class="title">Energie Consommé </span>
+            </a>
+          </li>
+
+          <li>
+            <a href="facture.html">
+              <span class="icon">
+                <ion-icon class="fas fa-database"></ion-icon>
+              </span>
+              <span class="title">Facture </span>
+            </a>
+          </li>
+
+          <li>
+            <a href="index.html">
+              <span class="icon">
+                <ion-icon class="fas fa-sign-out-alt"></ion-icon>
+              </span>
+              <span class="title">Sign Out</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- ========================= Main ==================== -->
+      <div class="main">
+        <div class="topbar">
+          <div class="toggle">
+            <ion-icon name="menu-outline"></ion-icon>
+          </div>
+
+          <div class="search">
+            <label>
+              <input type="text" placeholder="Search here" />
+              <ion-icon name="search-outline"></ion-icon>
+            </label>
+          </div>
+
+          <div class="user">
+            <img src="assets/imgs/khalidlogo.png" alt="" />
+          </div>
+        </div>
+
+        <!-- ======================= Cards ================== -->
+        <div class="cardBox">
+          <a href="pdu.html" class="card-link">
+            <div class="card">
+              <div>
+                <div class="numbers">pdu</div>
+                <div class="cardName">Daily Views</div>
+              </div>
+              <div class="iconBx">
+                <img src="assets/imgs/pduuu.png" alt="PDU Icon" class="custom-icon">
+            </div>
+            </div>
+          </a>
+
+          <a href="chiller.html" class="card-link">
+            <div class="card">
+              <div>
+                <div class="numbers">chiller</div>
+                <div class="cardName">Sales</div>
+              </div>
+              <div class="iconBx">
+                <img src="assets/imgs/chilller.png" alt="PDU Icon" class="custom-icon">
+            </div>
+            </div>
+          </a>
+
+          <a href="compressor.html" class="card-link">
+            <div class="card">
+              <div>
+                <div class="numbers">F-50h</div>
+                <div class="cardName">Comments</div>
+              </div>
+              <div class="iconBx">
+                <img src="assets/imgs/compressor.png" alt="PDU Icon" class="custom-icon">
+            </div>
+            </div>
+          </a>
+
+          <a href="cooling.html" class="card-link">
+            <div class="card">
+              <div>
+                <div class="numbers">cooling</div>
+                <div class="cardName">Earning</div>
+              </div>
+              <div class="iconBx">
+                <img src="assets/imgs/cooling.png" alt="PDU Icon" class="custom-icon">
+            </div>
+            </div>
+          </a>
+        </div>
+        <div class="header-container">
+            <div class="header-content">
+              <div class="header-text">
+                <h1>Main Power Distribution</h1>
+                <p class="subtitle">MRI Test Bench</p>
+              </div>
+              <img src="assets/imgs/mdppp.png" alt="PDU IRM" class="header-image" />
+            </div>
+          </div>
+        <!-- ================ VISUALISATION  ================= -->
+        <div class="dashboard">
+          <div class="card">
+            <h2>Ondes Triphasées</h2>
+            <div id="phase-plot"></div>
+          </div>
+
+          <div class="card">
+            <h2>Représentation Vectorielle</h2>
+            <div id="vector-plot"></div>
+          </div>
+          <div class="card" style="grid-column: 1 / -1">
+            <h2>Mesures Instantanées</h2>
+            <div class="phase-info">
+              <!-- Mesures de tension existantes -->
+               <div class="phase-card">
+                    <div>Phase L1</div>
+                    <div class="phase-value" id="l1-value">220.0</div>
+                    <div class="phase-unit">Volts (V)</div>
+                    <div class="phase-value" id="l1-angle">0.0°</div>
+                    <div class="phase-value" id="i1-value">10.0 A</div>
+                 </div>
+                 <div class="phase-card">
+                    <div>Phase L2</div>
+                    <div class="phase-value" id="l2-value">220.0</div>
+                    <div class="phase-unit">Volts (V)</div>
+                    <div class="phase-value" id="l2-angle">0.0°</div>
+                    <div class="phase-value" id="i2-value">10.0 A</div>
+                  </div>
+                  <div class="phase-card">
+                    <div>Phase L3</div>
+                    <div class="phase-value" id="l3-value">220.0</div>
+                    <div class="phase-unit">Volts (V)</div>
+                    <div class="phase-value" id="l3-angle">0.0°</div>
+                    <div class="phase-value" id="i3-value">10.0 A</div>
+                  </div>
+                     <!-- Nouvelle section pour les puissances -->
+                     <div class="phase-card">
+                        <h3>Puissances Totales</h3>
+                        <div class="phase-value">
+                          <div  class="phase-unit">Active (P):</div>
+                          <div id="active-power">0.0 kW</div>
+                          <div class="phase-unit">Réactive (Q):</div>
+                          <div id="reactive-power">0.0 kVAR</div>
+                          <div class="phase-unit">Apparente (S):</div>
+                          <div id="apparent-power">0.0 kVA</div>
+                        </div>
+                      </div>
+                         <!-- section pour les tesnsions composés  -->
+                      <div class="phase-card">
+                        <h3>Tensions Composées</h3>
+                        <div class="phase-value">
+                            <div class="phase-unit">L1-L2:</div>
+                            <div id="v12-value">380.0 V</div>
+                            <div class="phase-unit">L2-L3:</div>
+                            <div id="v23-value">380.0 V</div>
+                            <div class="phase-unit">L3-L1:</div>
+                            <div id="v31-value">380.0 V</div>
+                        </div>
+                    </div>
+                   <!-- Nouvelle section pour les déphasages -->
+              <div class="phase-card">
+                <h3>Cosφ Interphases</h3>
+                <div class="phase-value">
+                  <div  class="phase-unit">Cosφ L1-L2:</div>
+                  <div id="cosphi-l1l2">0.00</div>
+                  <div class="phase-unit">Cosφ L2-L3:</div>
+                  <div id="cosphi-l2l3">0.00</div>
+                  <div class="phase-unit">Cosφ L3-L1:</div>
+                  <div id="cosphi-l3l1">0.00</div>
+                </div>
+              </div>
+            </div>
+            <div class="controls">
+              <button id="play-btn">▶️ Animation</button>
+              <button id="pause-btn">⏸ Pause</button>
+              <button id="reset-btn">↻ Réinitialiser</button>
+            </div>
+          </div>
+        </div>
+    </div>
+    </div>
+</div>
+  <!--------------SCIRPT------------------->
+   <script>
+    const config = {
+    amplitude: 220 * Math.sqrt(2),
+    frequency: 50,
+    phaseShift: (2 * Math.PI) / 3,
+    points: 500,
+    timeRange: 0.04,
+    animationSpeed: 0.0005,
+    current: 15.0,
+    powerFactor: 0.92,
+    imbalance: 0.02
+};
+
+let time = [];
+let V_L1 = [];
+let V_L2 = [];
+let V_L3 = [];
+let I_L1 = [];
+let I_L2 = [];
+let I_L3 = [];
+let animationId = null;
+let startTime = null;
+let lastUpdateTime = 0;
+
+const vectorLayout = {
+    title: "Diagramme de Fresnel",
+    xaxis: { range: [-1.5, 1.5], zeroline: false, gridcolor: "rgba(255,255,255,0.1)", showgrid: true },
+    yaxis: { range: [-1.5, 1.5], scaleanchor: "x", gridcolor: "rgba(255,255,255,0.1)", showgrid: true },
+    shapes: [{ type: "circle", xref: "x", yref: "y", x0: -1, y0: -1, x1: 1, y1: 1, line: { color: "rgba(255,255,255,0.3)" } }],
+    plot_bgcolor: "rgba(0,0,0,0)",
+    paper_bgcolor: "rgba(0,0,0,0)",
+    font: { color: "white" },
+    showlegend: true
+};
+
+function initData() {
+    time = Array.from({ length: config.points }, (_, i) => (i / (config.points - 1)) * config.timeRange);
+    const t = 0;
+    const currentPhaseShift = Math.acos(config.powerFactor);
+    
+    // Génération des tensions
+    V_L1 = time.map(x => config.amplitude * Math.sin(2 * Math.PI * config.frequency * x + t));
+    V_L2 = time.map(x => config.amplitude * Math.sin(2 * Math.PI * config.frequency * x - config.phaseShift + t));
+    V_L3 = time.map(x => config.amplitude * Math.sin(2 * Math.PI * config.frequency * x + config.phaseShift + t));
+
+    // Génération des courants avec déphasage
+    I_L1 = time.map(x => config.current * Math.sqrt(2) * Math.sin(2 * Math.PI * config.frequency * x - currentPhaseShift));
+    I_L2 = time.map(x => config.current * Math.sqrt(2) * Math.sin(2 * Math.PI * config.frequency * x - config.phaseShift - currentPhaseShift));
+    I_L3 = time.map(x => config.current * Math.sqrt(2) * Math.sin(2 * Math.PI * config.frequency * x + config.phaseShift - currentPhaseShift));
+}
+
+function createPhasePlot() {
+    Plotly.newPlot("phase-plot", [
+        { x: time, y: V_L1, name: "L1", line: { color: "#e74c3c" } },
+        { x: time, y: V_L2, name: "L2", line: { color: "#2ecc71" } },
+        { x: time, y: V_L3, name: "L3", line: { color: "#3498db" } }
+    ], {
+        title: "Tensions Triphasées (50Hz)",
+        xaxis: { title: "Temps (s)", gridcolor: "rgba(255,255,255,0.1)" },
+        yaxis: { title: "Tension (V)", gridcolor: "rgba(255,255,255,0.1)" },
+        plot_bgcolor: "rgba(0,0,0,0)",
+        paper_bgcolor: "rgba(0,0,0,0)",
+        font: { color: "white" },
+        showlegend: true
+    });
+}
+
+function calculatePower(phaseAngleV, phaseAngleI) {
+    const Vrms = config.amplitude / Math.sqrt(2);
+    const Irms = config.current;
+    return {
+        active: 3 * Vrms * Irms * Math.cos(phaseAngleV - phaseAngleI),
+        reactive: 3 * Vrms * Irms * Math.sin(phaseAngleV - phaseAngleI),
+        apparent: 3 * Vrms * Irms
+    };
+}
+
+function updateAllValues(t) {
+    const instantIndex = Math.floor((t * config.points) / (2 * Math.PI)) % config.points;
+    
+    // Mise à jour des tensions
+    document.getElementById("l1-value").textContent = V_L1[instantIndex].toFixed(1);
+    document.getElementById("l2-value").textContent = V_L2[instantIndex].toFixed(1);
+    document.getElementById("l3-value").textContent = V_L3[instantIndex].toFixed(1);
+
+    // Mise à jour des courants
+    document.getElementById('i1-value').textContent = I_L1[instantIndex].toFixed(1) + ' A';
+    document.getElementById('i2-value').textContent = I_L2[instantIndex].toFixed(1) + ' A';
+    document.getElementById('i3-value').textContent = I_L3[instantIndex].toFixed(1) + ' A';
+
+    // Calcul des tensions composées
+    const V12 = (V_L1[instantIndex] - V_L2[instantIndex]) * (Math.sqrt(3)/Math.sqrt(2));
+    const V23 = (V_L2[instantIndex] - V_L3[instantIndex]) * (Math.sqrt(3)/Math.sqrt(2));
+    const V31 = (V_L3[instantIndex] - V_L1[instantIndex]) * (Math.sqrt(3)/Math.sqrt(2));
+    
+    document.getElementById('v12-value').textContent = `${Math.abs(V12).toFixed(1)} V`;
+    document.getElementById('v23-value').textContent = `${Math.abs(V23).toFixed(1)} V`;
+    document.getElementById('v31-value').textContent = `${Math.abs(V31).toFixed(1)} V`;
+
+    // Calcul des angles
+    const angle = (t * 180) / Math.PI;
+    document.getElementById("l1-angle").textContent = `${(angle % 360).toFixed(1)}°`;
+    document.getElementById("l2-angle").textContent = `${(angle % 360 - 120).toFixed(1)}°`;
+    document.getElementById("l3-angle").textContent = `${(angle % 360 + 120).toFixed(1)}°`;
+
+    // Calcul des cosφ interphases
+    const cosPhiL1L2 = Math.cos(Math.atan2(I_L2[instantIndex], V_L1[instantIndex]) - Math.atan2(I_L1[instantIndex], V_L2[instantIndex]));
+    const cosPhiL2L3 = Math.cos(Math.atan2(I_L3[instantIndex], V_L2[instantIndex]) - Math.atan2(I_L2[instantIndex], V_L3[instantIndex]));
+    const cosPhiL3L1 = Math.cos(Math.atan2(I_L1[instantIndex], V_L3[instantIndex]) - Math.atan2(I_L3[instantIndex], V_L1[instantIndex]));
+
+    document.getElementById('cosphi-l1l2').textContent = Math.abs(cosPhiL1L2).toFixed(2);
+    document.getElementById('cosphi-l2l3').textContent = Math.abs(cosPhiL2L3).toFixed(2);
+    document.getElementById('cosphi-l3l1').textContent = Math.abs(cosPhiL3L1).toFixed(2);
+
+    // Calcul des puissances
+    const power = calculatePower(t, Math.acos(config.powerFactor));
+    document.getElementById('active-power').textContent = `${(power.active/1000).toFixed(2)} kW`;
+    document.getElementById('reactive-power').textContent = `${(power.reactive/1000).toFixed(2)} kVAR`;
+    document.getElementById('apparent-power').textContent = `${(power.apparent/1000).toFixed(2)} kVA`;
+}
+
+function animate(timestamp) {
+    if (!startTime) startTime = timestamp;
+    const elapsed = timestamp - startTime;
+    
+    if (elapsed - lastUpdateTime > 16) {
+        const t = (elapsed / 1000) * config.animationSpeed * 2 * Math.PI * config.frequency;
+        
+        // Mise à jour des tensions
+        V_L1 = time.map(x => config.amplitude * Math.sin(2 * Math.PI * config.frequency * x + t));
+        V_L2 = time.map(x => config.amplitude * Math.sin(2 * Math.PI * config.frequency * x - config.phaseShift + t));
+        V_L3 = time.map(x => config.amplitude * Math.sin(2 * Math.PI * config.frequency * x + config.phaseShift + t));
+
+        // Mise à jour des courants avec variation
+        const currentPhaseShift = Math.acos(config.powerFactor) + (Math.random() * config.imbalance - config.imbalance/2);
+        I_L1 = time.map(x => config.current * Math.sqrt(2) * Math.sin(2 * Math.PI * config.frequency * x - currentPhaseShift));
+        I_L2 = time.map(x => config.current * Math.sqrt(2) * Math.sin(2 * Math.PI * config.frequency * x - config.phaseShift - currentPhaseShift));
+        I_L3 = time.map(x => config.current * Math.sqrt(2) * Math.sin(2 * Math.PI * config.frequency * x + config.phaseShift - currentPhaseShift));
+
+        Plotly.animate('phase-plot', {
+            data: [{ y: V_L1 }, { y: V_L2 }, { y: V_L3 }],
+            traces: [0, 1, 2]
+        }, { transition: { duration: 0 } });
+
+        Plotly.react('vector-plot', [{
+            x: [0, Math.cos(t)], y: [0, Math.sin(t)], name: 'L1', line: { color: '#e74c3c' }
+        }, {
+            x: [0, Math.cos(t - config.phaseShift)], y: [0, Math.sin(t - config.phaseShift)], name: 'L2', line: { color: '#2ecc71' }
+        }, {
+            x: [0, Math.cos(t + config.phaseShift)], y: [0, Math.sin(t + config.phaseShift)], name: 'L3', line: { color: '#3498db' }
+        }], vectorLayout);
+
+        updateAllValues(t);
+        lastUpdateTime = elapsed;
+    }
+    animationId = requestAnimationFrame(animate);
+}
+
+function startAnimation() {
+    if (!animationId) {
+        startTime = null;
+        lastUpdateTime = 0;
+        animationId = requestAnimationFrame(animate);
+    }
+}
+
+function pauseAnimation() {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+}
+
+function resetAnimation() {
+    pauseAnimation();
+    initData();
+    Plotly.purge('phase-plot');
+    Plotly.purge('vector-plot');
+    createPhasePlot();
+    createVectorPlot(0);
+    updateAllValues(0);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initData();
+    createPhasePlot();
+    updateAllValues(0);
+    startAnimation();
+});
+
+document.getElementById('play-btn').addEventListener('click', startAnimation);
+document.getElementById('pause-btn').addEventListener('click', pauseAnimation);
+document.getElementById('reset-btn').addEventListener('click', resetAnimation);
+    </script>
+    <script src="assets/js/main.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- ====== ionicons ======= -->
+    <script
+      type="module"
+      src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"
+    ></script>
+    <script
+      nomodule
+      src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"
+    ></script>
+    
+  </body>
+</html>

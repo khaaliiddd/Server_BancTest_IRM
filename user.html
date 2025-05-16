@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>IRM Engineer Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --primary: #1e293b;
+        --secondary: #0ea5e9;
+        --accent: #f43f5e;
+        --dark: #0f172a;
+        --light: #f8fafc;
+        --gray: #94a3b8;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background-color: var(--dark);
+        color: var(--light);
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Header moderne avec image de fond */
+      header {
+        background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+          url("assets/imgs/LLOOGGOO.png") center/cover;
+        padding: 1rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 80px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 10;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .logo img {
+        height: 50px;
+        filter: drop-shadow(0 0 5px rgba(74, 222, 128, 0.5));
+      }
+
+      .logo h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        background: linear-gradient(to right, #38bdf8, #22d3ee);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      /* Contenu principal sans scrolling */
+      .dashboard-container {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        height: calc(100vh - 80px);
+      }
+
+      /* Sidebar profil */
+      .profile-sidebar {
+        background: rgba(15, 23, 42, 0.8);
+        padding: 2rem 1.5rem;
+        border-right: 1px solid rgba(148, 163, 184, 0.1);
+        backdrop-filter: blur(10px);
+      }
+
+      .user-profile {
+        display: fixe;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      .user-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 4px solid var(--secondary);
+        object-fit: cover;
+        margin-bottom: 1rem;
+        box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+      }
+
+      .user-name {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--light);
+      }
+
+      .user-title {
+        color: var(--secondary);
+        font-weight: 500;
+        margin-bottom: 1.5rem;
+      }
+
+      .user-info {
+        width: 100%;
+      }
+
+      .info-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 1rem;
+        padding: 0.8rem;
+        background: rgba(30, 41, 59, 0.5);
+        border-radius: 8px;
+        transition: all 0.3s;
+      }
+
+      .info-item:hover {
+        background: rgba(14, 165, 233, 0.1);
+      }
+
+      .info-icon {
+        color: var(--secondary);
+        font-size: 1.2rem;
+        min-width: 24px;
+      }
+
+      /* Zone principale */
+      .main-content {
+        padding: 2rem;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 2rem;
+      }
+
+      .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--secondary);
+      }
+
+      .section-title i {
+        font-size: 1.1rem;
+      }
+
+      /* Grille des utilisateurs */
+      .user-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .user-card {
+        background: rgba(15, 23, 42, 0.6);
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: all 0.3s;
+        border-left: 4px solid var(--secondary);
+        backdrop-filter: blur(5px);
+        cursor: pointer;
+      }
+
+      .user-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        background: rgba(30, 41, 59, 0.8);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 1rem;
+      }
+
+      .card-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: 2px solid var(--secondary);
+        object-fit: cover;
+      }
+
+      .card-name {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 0.2rem;
+      }
+
+      .card-position {
+        font-size: 0.85rem;
+        color: var(--gray);
+      }
+
+      .card-details {
+        font-size: 0.9rem;
+        line-height: 1.6;
+      }
+
+      .card-details p {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 0.5rem;
+      }
+
+      .card-details i {
+        color: var(--secondary);
+        width: 20px;
+      }
+
+      /* Responsive */
+      @media (max-width: 1024px) {
+        .dashboard-container {
+          grid-template-columns: 1fr;
+        }
+
+        .profile-sidebar {
+          display: none;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .user-grid {
+          grid-template-columns: 1fr;
+        }
+
+        header {
+          flex-direction: column;
+          height: auto;
+          padding: 1rem;
+          gap: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header moderne avec logo -->
+    <header>
+      <div class="logo">
+        <img src="assets/imgs/signa.png" alt="IRM Logo" />
+        <h1>IRM Engineer Dashboard</h1>
+      </div>
+    </header>
+
+    <!-- Dashboard principal -->
+    <div class="dashboard-container">
+      <!-- Sidebar profil -->
+      <aside class="profile-sidebar">
+        <div class="user-profile">
+          <img
+            id="main-avatar"
+            src="assets/imgs/LLOOGGOO.png"
+            class="user-avatar"
+            alt="Profile"
+          />
+          <h2 id="main-name" class="user-name">Mr. Khalid Essahnouny</h2>
+          <p id="main-position" class="user-title">
+            Electrical | Electronic Engineer
+          </p>
+
+          <div class="user-info">
+            <div class="info-item">
+              <i class="fas fa-envelope info-icon"></i>
+              <span id="main-email">khalid.sahnouny@gmail.com</span>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-phone info-icon"></i>
+              <span id="main-phone">+212 6 65 71 96 86</span>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-map-marker-alt info-icon"></i>
+              <span id="main-address"
+                >42 Avenue de l'Innovation, Casablanca</span
+              >
+            </div>
+            <div class="info-item">
+              <i class="fas fa-id-badge info-icon"></i>
+              <span>ID: IRM-ENG-042</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Contenu principal -->
+      <main class="main-content">
+        <div>
+          <h2 class="section-title">
+            <i class="fas fa-users"></i> Équipe Technique IRM
+          </h2>
+          <div class="user-grid" id="user-list">
+            <!-- Carte utilisateur 1 -->
+            <div
+              class="user-card"
+              onclick="updateMainUser('https://cdn-icons-png.flaticon.com/512/149/149071.png', 'Amine Galloul', 'Chef Modality IRM | Radiologie', 'amine.galloul@t2s.com', '+33 6 00 12 34 56', '6 Rue des Capteurs, Lyon, France')"
+            >
+              <div class="card-header">
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                  class="card-avatar"
+                  alt="Amine Galloul"
+                />
+                <div>
+                  <h3 class="card-name">Amine Galloul</h3>
+                  <p class="card-position">Chef Modality IRM</p>
+                </div>
+              </div>
+              <div class="card-details">
+                <p><i class="fas fa-briefcase"></i> Radiologie</p>
+                <p><i class="fas fa-envelope"></i> amine.galloul@t2s.com</p>
+                <p><i class="fas fa-phone"></i> +33 6 00 12 34 56</p>
+              </div>
+            </div>
+
+            <!-- Carte utilisateur 2 -->
+            <div
+              class="user-card"
+              onclick="updateMainUser('https://cdn-icons-png.flaticon.com/512/149/149071.png', 'Bouchaib Fissal', 'Maintenance Engineer', 'Bouchaib.Fissal@robotix.ma', '+212 6 88 77 11 22', '9 Technopole, Rabat, Maroc')"
+            >
+              <div class="card-header">
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                  class="card-avatar"
+                  alt="Bouchaib Fissal"
+                />
+                <div>
+                  <h3 class="card-name">Bouchaib Fissal</h3>
+                  <p class="card-position">Maintenance Engineer</p>
+                </div>
+              </div>
+              <div class="card-details">
+                <p><i class="fas fa-cogs"></i> Maintenance IRM</p>
+                <p>
+                  <i class="fas fa-envelope"></i> Bouchaib.Fissal@robotix.ma
+                </p>
+                <p><i class="fas fa-phone"></i> +212 6 88 77 11 22</p>
+              </div>
+            </div>
+
+            <!-- Carte utilisateur 3 -->
+            <div
+              class="user-card"
+              onclick="updateMainUser('https://cdn-icons-png.flaticon.com/512/149/149071.png', 'Khalid Amdid', 'AI Researcher', 'khalid.amdid@aix.ai', '+33 6 77 88 99 00', '88 Rue de l’IA, Grenoble, France')"
+            >
+              <div class="card-header">
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                  class="card-avatar"
+                  alt="Khalid Amdid"
+                />
+                <div>
+                  <h3 class="card-name">Khalid Amdid</h3>
+                  <p class="card-position">AI Researcher</p>
+                </div>
+              </div>
+              <div class="card-details">
+                <p><i class="fas fa-brain"></i> Intelligence Artificielle</p>
+                <p><i class="fas fa-envelope"></i> khalid.amdid@aix.ai</p>
+                <p><i class="fas fa-phone"></i> +33 6 77 88 99 00</p>
+              </div>
+            </div>
+
+            <!-- Carte utilisateur 4 -->
+            <div
+              class="user-card"
+              onclick="updateMainUser('https://cdn-icons-png.flaticon.com/512/149/149071.png', 'Ayoub Benali', 'Technicien IRM', 'ayoub.benali@meditech.fr', '+33 6 45 67 89 12', '23 Avenue de la Santé, Marseille, France')"
+            >
+              <div class="card-header">
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                  class="card-avatar"
+                  alt="Ayoub Benali"
+                />
+                <div>
+                  <h3 class="card-name">Ayoub Benali</h3>
+                  <p class="card-position">Technicien IRM</p>
+                </div>
+              </div>
+              <div class="card-details">
+                <p><i class="fas fa-tools"></i> Support Technique</p>
+                <p><i class="fas fa-envelope"></i> ayoub.benali@meditech.fr</p>
+                <p><i class="fas fa-phone"></i> +33 6 45 67 89 12</p>
+              </div>
+            </div>
+
+            <!-- Carte utilisateur 5 -->
+            <div
+              class="user-card"
+              onclick="updateMainUser('https://cdn-icons-png.flaticon.com/512/149/149071.png', 'Nassim Haddadi', 'Installateur IRM', 'nassim.haddadi@irmtech.fr', '+33 6 12 34 56 78', '42 Boulevard de la Radiologie, Nantes, France')"
+            >
+              <div class="card-header">
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                  class="card-avatar"
+                  alt="Nassim Haddadi"
+                />
+                <div>
+                  <h3 class="card-name">Nassim Haddadi</h3>
+                  <p class="card-position">Installateur IRM</p>
+                </div>
+              </div>
+              <div class="card-details">
+                <p><i class="fas fa-building"></i> Installation</p>
+                <p><i class="fas fa-envelope"></i> nassim.haddadi@irmtech.fr</p>
+                <p><i class="fas fa-phone"></i> +33 6 12 34 56 78</p>
+              </div>
+            </div>
+
+            <!-- Carte utilisateur 6 -->
+            <div
+              class="user-card"
+              onclick="updateMainUser('https://cdn-icons-png.flaticon.com/512/149/149071.png', 'Yahya Afro', 'Embedded Systems Engineer', 'alex.lefevre@innovatech.fr', '+33 1 23 45 67 89', '100 Route de la Tech, Nice, France')"
+            >
+              <div class="card-header">
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                  class="card-avatar"
+                  alt="Yahya Afro"
+                />
+                <div>
+                  <h3 class="card-name">Yahya Afro</h3>
+                  <p class="card-position">Embedded Engineer</p>
+                </div>
+              </div>
+              <div class="card-details">
+                <p><i class="fas fa-microchip"></i> Systèmes Embarqués</p>
+                <p>
+                  <i class="fas fa-envelope"></i> alex.lefevre@innovatech.fr
+                </p>
+                <p><i class="fas fa-phone"></i> +33 1 23 45 67 89</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      function updateMainUser(avatar, name, position, email, phone, address) {
+        document.getElementById("main-avatar").src = avatar;
+        document.getElementById("main-name").textContent = name;
+        document.getElementById("main-position").textContent = position;
+        document.getElementById("main-email").textContent = email;
+        document.getElementById("main-phone").textContent = phone;
+        document.getElementById("main-address").textContent = address;
+
+        // Animation de feedback
+        const profile = document.querySelector(".user-profile");
+        profile.style.transform = "scale(1.03)";
+        setTimeout(() => {
+          profile.style.transform = "scale(1)";
+        }, 300);
+      }
+    </script>
+  </body>
+</html>

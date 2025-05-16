@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Compressor - Banc de Test IRM</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <style>
+      :root {
+        --primary-color: #2a1095;
+        --secondary-color: #fa8500;
+        --accent-color: #e74c3c;
+        --text-color: #ecf0f1;
+        --card-bg: #2a1095;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: var(--primary-color);
+        color: var(--text-color);
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-gap: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .card {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      h1 {
+        color: var(--secondary-color);
+        margin: 0;
+        font-size: 2.8rem; /* Taille augmentée */
+        font-weight: 700;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        letter-spacing: 1.5px;
+        position: relative;
+        padding-bottom: 15px;
+        text-transform: uppercase;
+        transition: all 0.3s ease;
+      }
+
+      h2 {
+        color: var(--text-color);
+        border-bottom: 2px solid var(--secondary-color);
+        padding-bottom: 10px;
+        margin-top: 0;
+      }
+
+      #phase-plot {
+        height: 500px;
+      }
+
+      /* Ajouts CSS */
+      .power-card,
+      .phase-diff-card {
+        flex: 1;
+        min-width: 300px;
+        margin: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .power-grid,
+      .phase-diff-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        align-items: center;
+      }
+
+      .power-grid > div:nth-child(odd),
+      .phase-diff-grid > div:nth-child(odd) {
+        text-align: right;
+        opacity: 0.8;
+        padding-right: 10px;
+      }
+
+      @media (max-width: 768px) {
+        .power-card,
+        .phase-diff-card {
+          width: 100%;
+          margin: 10px 0;
+        }
+      }
+      /* Ajouts CSS */
+      #vector-plot {
+        height: 500px;
+      }
+
+      .phase-info {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin-top: 20px;
+      }
+
+      .phase-card {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .phase-value {
+        font-size: 24px;
+        font-weight: bold;
+        margin: 5px 0;
+      }
+
+      .phase-unit {
+        font-size: 14px;
+        opacity: 0.8;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      button {
+        background-color: var(--secondary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s;
+      }
+
+      button:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+      }
+
+      .header-text {
+        flex: 1;
+        padding-right: 30px;
+      }
+
+      /* ===================== Main ===================== */
+      .header-container {
+        width: clamp(100px, 50%, 1300px); /* Largeur entre 300px et 600px */
+        height: auto;
+        min-height: 15vh; /* Hauteur minimum relative à l'écran */
+        margin: 2rem auto;
+        padding: 1.5vmin;
+        border-radius: 2vw; /* Arrondi relatif à la largeur */
+        background: linear-gradient(145deg, #2a1095 0%, #1a1a4a 100%);
+        box-shadow: 0 1vmin 2vmin rgba(0, 0, 0, 0.2);
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+
+      .header-content {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 3vmin;
+        padding: 2vmin;
+      }
+
+      .header-image {
+        width: clamp(120px, 30%, 200px); /* Largeur image adaptive */
+        height: auto;
+        aspect-ratio: 1; /* Carré parfait */
+        object-fit: cover;
+      }
+
+      @media (hover: hover) {
+        .header-container:hover {
+          transform: scale(1.02);
+          box-shadow: 0 2vmin 3vmin rgba(0, 0, 0, 0.3);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .header-container {
+          min-height: 12vh;
+          width: 85%;
+        }
+
+        .header-content {
+          flex-direction: column;
+          gap: 2vmin;
+        }
+
+        .header-image {
+          width: 50%;
+        }
+      }
+      /* Styles pour la section climatique - Version améliorée */
+      .climate-section {
+        margin-top: 20px;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.15);
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .climate-section h2 {
+        color: var(--secondary-color);
+        margin-bottom: 15px;
+        font-size: 1.4rem;
+        display: flex;
+        align-items: center;
+      }
+
+      .climate-section h2::before {
+        content: "";
+        display: inline-block;
+        width: 8px;
+        height: 25px;
+        background: linear-gradient(
+          to bottom,
+          var(--electric-blue),
+          var(--neon-purple)
+        );
+        margin-right: 12px;
+        border-radius: 4px;
+      }
+
+      .climate-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+      }
+
+      .climate-card {
+        display: flex;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 10px;
+        padding: 15px;
+        align-items: center;
+        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        border-left: 4px solid;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .climate-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.03) 0%,
+          transparent 100%
+        );
+        z-index: 0;
+      }
+
+      .climate-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Cartes spécifiques */
+      .temp-card {
+        border-left-color: #ff6b6b;
+        background: linear-gradient(
+          90deg,
+          rgba(255, 107, 107, 0.08) 0%,
+          rgba(0, 0, 0, 0) 70%
+        );
+      }
+
+      .pressure-card {
+        border-left-color: #48dbfb;
+        background: linear-gradient(
+          90deg,
+          rgba(72, 219, 251, 0.08) 0%,
+          rgba(0, 0, 0, 0) 70%
+        );
+      }
+
+      .humidity-card {
+        border-left-color: #6bffb8;
+        background: linear-gradient(
+          90deg,
+          rgba(107, 255, 184, 0.08) 0%,
+          rgba(0, 0, 0, 0) 70%
+        );
+      }
+
+      .water-card {
+        border-left-color: #a18aff;
+        background: linear-gradient(
+          90deg,
+          rgba(161, 138, 255, 0.08) 0%,
+          rgba(0, 0, 0, 0) 70%
+        );
+      }
+
+      /* Conteneur icônes */
+      .climate-icon {
+        position: relative;
+        width: 60px;
+        height: 60px;
+        margin-right: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      /* Image du logo */
+      .param-icon {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+        transition: all 0.3s ease;
+        z-index: 2;
+      }
+
+      /* Icône Font Awesome superposée */
+      .icon-overlay {
+        position: absolute;
+        font-size: 1.4rem;
+        color: white;
+        text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        z-index: 3;
+        bottom: 5px;
+        right: 5px;
+        background: rgba(0, 0, 0, 0.4);
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Contenu texte */
+      .climate-content {
+        flex: 1;
+        z-index: 1;
+      }
+
+      .climate-label {
+        font-size: 0.85rem;
+        opacity: 0.8;
+        margin-bottom: 5px;
+        letter-spacing: 0.5px;
+      }
+
+      .climate-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        line-height: 1;
+        margin: 5px 0;
+        background: linear-gradient(to right, #ffffff, #e0e0e0);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .climate-unit {
+        font-size: 0.8rem;
+        opacity: 0.7;
+        font-weight: 500;
+      }
+
+      /* Indicateur de tendance */
+      .climate-trend {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 15px;
+        margin-left: 12px;
+        font-weight: 600;
+        align-self: flex-end;
+        z-index: 1;
+      }
+
+      .up {
+        background: rgba(255, 107, 107, 0.2);
+        color: #ff6b6b;
+      }
+
+      .down {
+        background: rgba(107, 255, 184, 0.2);
+        color: #6bffb8;
+      }
+
+      .stable {
+        background: rgba(72, 219, 251, 0.2);
+        color: #48dbfb;
+      }
+
+      /* Effets au survol */
+      .climate-card:hover .param-icon {
+        transform: scale(1.1) rotate(5deg);
+      }
+
+      .climate-card:hover .climate-value {
+        background: linear-gradient(
+          to right,
+          var(--electric-blue),
+          var(--neon-purple)
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+      }
+
+      /* Version mobile */
+      @media (max-width: 768px) {
+        .climate-section {
+          padding: 15px;
+        }
+
+        .climate-grid {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .climate-card {
+          padding: 12px;
+        }
+
+        .climate-icon {
+          width: 50px;
+          height: 50px;
+          margin-right: 15px;
+        }
+
+        .icon-overlay {
+          font-size: 1.1rem;
+          width: 20px;
+          height: 20px;
+        }
+
+        .climate-value {
+          font-size: 1.4rem;
+        }
+      }
+
+      /* Animation pulsation pour les valeurs critiques */
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .critical {
+        animation: pulse 1.5s infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header-container">
+      <div class="header-content">
+        <div class="header-text">
+          <h1>Compressor</h1>
+          <p class="subtitle">Banc de Test IRM</p>
+        </div>
+        <img
+          src="assets/imgs/compressor.png"
+          alt="PDU IRM"
+          class="header-image"
+        />
+      </div>
+    </div>
+    <!-- ================ VISUALISATION  ================= -->
+    <div class="dashboard">
+      <div class="card">
+        <h2>Ondes Triphasées</h2>
+        <div id="phase-plot"></div>
+      </div>
+
+      <div class="card">
+        <h2>Représentation Vectorielle</h2>
+        <div id="vector-plot"></div>
+      </div>
+      <div class="card" style="grid-column: 1 / -1">
+        <h2>Mesures Instantanées</h2>
+        <div class="phase-info">
+          <!-- Mesures de tension existantes -->
+          <div class="phase-card">
+            <div>Phase L1</div>
+            <div class="phase-value" id="l1-value">220.0</div>
+            <div class="phase-unit">Volts (V)</div>
+            <div class="phase-value" id="l1-angle">0.0°</div>
+            <div class="phase-value" id="i1-value">10.0 A</div>
+          </div>
+          <div class="phase-card">
+            <div>Phase L2</div>
+            <div class="phase-value" id="l2-value">220.0</div>
+            <div class="phase-unit">Volts (V)</div>
+            <div class="phase-value" id="l2-angle">0.0°</div>
+            <div class="phase-value" id="i2-value">10.0 A</div>
+          </div>
+          <div class="phase-card">
+            <div>Phase L3</div>
+            <div class="phase-value" id="l3-value">220.0</div>
+            <div class="phase-unit">Volts (V)</div>
+            <div class="phase-value" id="l3-angle">0.0°</div>
+            <div class="phase-value" id="i3-value">10.0 A</div>
+          </div>
+          <!-- Nouvelle section pour les puissances -->
+          <div class="phase-card">
+            <h3>Puissances Totales</h3>
+            <div class="phase-value">
+              <div class="phase-unit">Active (P):</div>
+              <div id="active-power">0.0 kW</div>
+              <div class="phase-unit">Réactive (Q):</div>
+              <div id="reactive-power">0.0 kVAR</div>
+              <div class="phase-unit">Apparente (S):</div>
+              <div id="apparent-power">0.0 kVA</div>
+            </div>
+          </div>
+          <!-- section pour les tesnsions composés  -->
+          <div class="phase-card">
+            <h3>Tensions Composées</h3>
+            <div class="phase-value">
+              <div class="phase-unit">L1-L2:</div>
+              <div id="v12-value">380.0 V</div>
+              <div class="phase-unit">L2-L3:</div>
+              <div id="v23-value">380.0 V</div>
+              <div class="phase-unit">L3-L1:</div>
+              <div id="v31-value">380.0 V</div>
+            </div>
+          </div>
+          <!-- Nouvelle section pour les déphasages -->
+          <div class="phase-card">
+            <h3>Cosφ Interphases</h3>
+            <div class="phase-value">
+              <div class="phase-unit">Cosφ L1-L2:</div>
+              <div id="cosphi-l1l2">0.00</div>
+              <div class="phase-unit">Cosφ L2-L3:</div>
+              <div id="cosphi-l2l3">0.00</div>
+              <div class="phase-unit">Cosφ L3-L1:</div>
+              <div id="cosphi-l3l1">0.00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nouvelle section pour les paramètres climatiques -->
+        <div class="climate-section">
+          <h2 style="margin-top: 20px">Paramètres Climatiques</h2>
+          <div class="climate-grid">
+            <!-- Ligne 1 -->
+            <div class="climate-card temp-card">
+              <div class="climate-icon">
+                <img
+                  src="https://cdn4.iconfinder.com/data/icons/weather-286/52/thermometer__temperature__degree__weather__climate-1024.png"
+                  alt="Température"
+                  class="param-icon"
+                />
+                <!-- <i class="fas fa-thermometer-half icon-overlay"></i> -->
+              </div>
+              <div class="climate-content">
+                <div class="climate-label">Température</div>
+                <div class="climate-value" id="temp-value"></div>
+                <div class="climate-unit">°C</div>
+              </div>
+              <div class="climate-trend up">
+                <i class="fas fa-arrow-up"></i> 0.2°C/min
+              </div>
+            </div>
+
+            <div class="climate-card pressure-card">
+              <div class="climate-icon">
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/231/231833.png"
+                  alt="Pression"
+                  class="param-icon"
+                />
+                <!-- <i class="fas fa-tachometer-alt icon-overlay"></i> -->
+              </div>
+              <div class="climate-content">
+                <div class="climate-label">Pression Hélium</div>
+                <div class="climate-value" id="pressure-value"></div>
+                <div class="climate-unit">bar</div>
+              </div>
+              <div class="climate-trend stable">
+                <i class="fas fa-equals"></i> Stable
+              </div>
+            </div>
+
+            <!-- Ligne 2 -->
+            <div class="climate-card humidity-card">
+              <div class="climate-icon">
+                <img
+                  src="https://icon-library.com/images/humidity-icon/humidity-icon-1.jpg"
+                  alt="Humidité"
+                  class="param-icon"
+                />
+                <!-- <i class="fas fa-tint icon-overlay"></i> -->
+              </div>
+              <div class="climate-content">
+                <div class="climate-label">Humidité</div>
+                <div class="climate-value" id="humidity-value"></div>
+                <div class="climate-unit">% RH</div>
+              </div>
+              <div class="climate-trend down">
+                <i class="fas fa-arrow-down"></i> 1.5%/h
+              </div>
+            </div>
+
+            <div class="climate-card water-card">
+              <div class="climate-icon">
+                <img
+                  src="https://i.imgur.com/p1DJ8RM.png"
+                  alt="Niveau d'eau"
+                  class="param-icon"
+                />
+                <!-- <i class="fas fa-water icon-overlay"></i> -->
+              </div>
+              <div class="climate-content">
+                <div class="climate-label">Niveau d'Eau</div>
+                <div class="climate-value" id="water-value"></div>
+                <div class="climate-unit">cm</div>
+              </div>
+              <div class="climate-trend stable">
+                <i class="fas fa-equals"></i> Stable
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="play-btn">▶️ Animation</button>
+          <button id="pause-btn">⏸ Pause</button>
+          <button id="reset-btn">↻ Réinitialiser</button>
+        </div>
+      </div>
+    </div>
+    <!--------------=========================SCIRPT_CLIMATIQUE_DATA==================------------------->
+    <script>
+      // 1. Configuration Firebase
+      const firebaseConfig = {
+        apiKey: "AIzaSyD5lTweTgeQdG6XU2PtxjFTpRwfDUpjctc",
+        authDomain: "banc-de-test-588bb.firebaseapp.com",
+        databaseURL: "https://banc-de-test-588bb-default-rtdb.firebaseio.com",
+        projectId: "banc-de-test-588bb",
+        storageBucket: "banc-de-test-588bb.firebasestorage.app",
+        messagingSenderId: "1085872542530",
+        appId: "1:1085872542530:web:3432fadb3a49bdca316edb",
+        measurementId: "G-W8DC2XRW47",
+      };
+
+      // 2. Initialisation Firebase
+      const app = firebase.initializeApp(firebaseConfig);
+      const database = firebase.database();
+
+      // 3. Variables pour le suivi des tendances
+      const previousValues = {
+        temp: null,
+        pression: null,
+        humidity: null,
+        lv_water: null,
+        lastUpdate: null,
+      };
+
+      // 4. Fonction principale pour surveiller les données
+      function monitorChillerData() {
+        const chillerRef = database.ref("f50h");
+
+        chillerRef.on(
+          "value",
+          (snapshot) => {
+            const data = snapshot.val();
+            if (!data) {
+              console.error("Aucune donnée reçue de Firebase");
+              return;
+            }
+
+            console.log("Données reçues:", data);
+
+            updateUI(data);
+            updateTrends(data);
+            previousValues.lastUpdate = new Date();
+          },
+          (error) => {
+            console.error("Erreur Firebase:", error);
+          }
+        );
+      }
+
+      // 5. Mise à jour de l'interface utilisateur
+      function updateUI(data) {
+        updateElement("temp-value", data.temp);
+        updateElement("pressure-value", data.pression);
+        updateElement("humidity-value", data.humidity);
+
+        // Cas spécial pour le niveau d'eau
+        const waterElement = document.getElementById("water-value");
+        if (waterElement && data.lv_water !== undefined) {
+          waterElement.textContent = data.lv_water === "oui" ? "15.6" : "0.0";
+        }
+      }
+
+      function updateElement(id, value) {
+        const element = document.getElementById(id);
+        if (element && value !== undefined) {
+          element.textContent = value.toFixed(1);
+        }
+      }
+
+      // 6. Gestion des tendances (simplifiée)
+      function updateTrends(data) {
+        updateTrend("temp", data.temp);
+        updateTrend("pression", data.pression);
+        updateTrend("humidity", data.humidity);
+        updateWaterTrend(data.lv_water);
+
+        // Mise à jour des valeurs précédentes
+        previousValues.temp = data.temp;
+        previousValues.pression = data.pression;
+        previousValues.humidity = data.humidity;
+        previousValues.lv_water = data.lv_water;
+      }
+
+      function updateTrend(param, currentValue) {
+        const card = document.querySelector(`.${param}-card`);
+        if (!card) return;
+
+        const trend = card.querySelector(".climate-trend");
+        if (!trend) return;
+
+        if (previousValues[param] === null) {
+          trend.innerHTML = '<i class="fas fa-equals"></i> Stable';
+          trend.className = "climate-trend stable";
+          return;
+        }
+
+        const diff = currentValue - previousValues[param];
+        const absDiff = Math.abs(diff);
+
+        if (absDiff < 0.1) {
+          trend.innerHTML = '<i class="fas fa-equals"></i> Stable';
+          trend.className = "climate-trend stable";
+        } else if (diff > 0) {
+          trend.innerHTML = `<i class="fas fa-arrow-up"></i> ${absDiff.toFixed(
+            1
+          )}${getUnit(param)}`;
+          trend.className = "climate-trend up";
+        } else {
+          trend.innerHTML = `<i class="fas fa-arrow-down"></i> ${absDiff.toFixed(
+            1
+          )}${getUnit(param)}`;
+          trend.className = "climate-trend down";
+        }
+      }
+
+      function updateWaterTrend(currentValue) {
+        const card = document.querySelector(".water-card");
+        if (!card) return;
+
+        const trend = card.querySelector(".climate-trend");
+        if (!trend) return;
+
+        if (previousValues.lv_water === null) {
+          trend.innerHTML = '<i class="fas fa-equals"></i> Stable';
+          trend.className = "climate-trend stable";
+          return;
+        }
+
+        if (currentValue !== previousValues.lv_water) {
+          if (currentValue === "oui") {
+            trend.innerHTML = '<i class="fas fa-arrow-up"></i> Niveau Haut';
+            trend.className = "climate-trend up";
+          } else {
+            trend.innerHTML = '<i class="fas fa-arrow-down"></i> Niveau Bas';
+            trend.className = "climate-trend down";
+          }
+        } else {
+          trend.innerHTML = '<i class="fas fa-equals"></i> Stable';
+          trend.className = "climate-trend stable";
+        }
+      }
+
+      function getUnit(param) {
+        return (
+          {
+            temp: "°C",
+            pression: "bar",
+            humidity: "%",
+          }[param] || ""
+        );
+      }
+
+      // 7. Initialisation après chargement complet
+      window.addEventListener("load", () => {
+        // Vérification des éléments
+        const requiredIds = [
+          "temp-value",
+          "pressure-value",
+          "humidity-value",
+          "water-value",
+        ];
+        const allExist = requiredIds.every((id) => document.getElementById(id));
+
+        if (!allExist) {
+          console.error("Certains éléments HTML sont introuvables");
+          return;
+        }
+
+        // Charger Font Awesome si absent
+        if (!document.querySelector(".fa")) {
+          const fa = document.createElement("script");
+          fa.src = "https://kit.fontawesome.com/a076d05399.js";
+          fa.crossOrigin = "anonymous";
+          document.head.appendChild(fa);
+        }
+
+        // Démarrer la surveillance
+        monitorChillerData();
+      });
+    </script>
+    <!--------------SCIRPT------------------->
+    <script>
+      const config = {
+        amplitude: 220 * Math.sqrt(2),
+        frequency: 50,
+        phaseShift: (2 * Math.PI) / 3,
+        points: 500,
+        timeRange: 0.04,
+        animationSpeed: 0.0005,
+        current: 15.0,
+        powerFactor: 0.92,
+        imbalance: 0.02,
+      };
+
+      let time = [];
+      let V_L1 = [];
+      let V_L2 = [];
+      let V_L3 = [];
+      let I_L1 = [];
+      let I_L2 = [];
+      let I_L3 = [];
+      let animationId = null;
+      let startTime = null;
+      let lastUpdateTime = 0;
+
+      const vectorLayout = {
+        title: "Diagramme de Fresnel",
+        xaxis: {
+          range: [-1.5, 1.5],
+          zeroline: false,
+          gridcolor: "rgba(255,255,255,0.1)",
+          showgrid: true,
+        },
+        yaxis: {
+          range: [-1.5, 1.5],
+          scaleanchor: "x",
+          gridcolor: "rgba(255,255,255,0.1)",
+          showgrid: true,
+        },
+        shapes: [
+          {
+            type: "circle",
+            xref: "x",
+            yref: "y",
+            x0: -1,
+            y0: -1,
+            x1: 1,
+            y1: 1,
+            line: { color: "rgba(255,255,255,0.3)" },
+          },
+        ],
+        plot_bgcolor: "rgba(0,0,0,0)",
+        paper_bgcolor: "rgba(0,0,0,0)",
+        font: { color: "white" },
+        showlegend: true,
+      };
+
+      function initData() {
+        time = Array.from(
+          { length: config.points },
+          (_, i) => (i / (config.points - 1)) * config.timeRange
+        );
+        const t = 0;
+        const currentPhaseShift = Math.acos(config.powerFactor);
+
+        // Génération des tensions
+        V_L1 = time.map(
+          (x) =>
+            config.amplitude * Math.sin(2 * Math.PI * config.frequency * x + t)
+        );
+        V_L2 = time.map(
+          (x) =>
+            config.amplitude *
+            Math.sin(2 * Math.PI * config.frequency * x - config.phaseShift + t)
+        );
+        V_L3 = time.map(
+          (x) =>
+            config.amplitude *
+            Math.sin(2 * Math.PI * config.frequency * x + config.phaseShift + t)
+        );
+
+        // Génération des courants avec déphasage
+        I_L1 = time.map(
+          (x) =>
+            config.current *
+            Math.sqrt(2) *
+            Math.sin(2 * Math.PI * config.frequency * x - currentPhaseShift)
+        );
+        I_L2 = time.map(
+          (x) =>
+            config.current *
+            Math.sqrt(2) *
+            Math.sin(
+              2 * Math.PI * config.frequency * x -
+                config.phaseShift -
+                currentPhaseShift
+            )
+        );
+        I_L3 = time.map(
+          (x) =>
+            config.current *
+            Math.sqrt(2) *
+            Math.sin(
+              2 * Math.PI * config.frequency * x +
+                config.phaseShift -
+                currentPhaseShift
+            )
+        );
+      }
+
+      function createPhasePlot() {
+        Plotly.newPlot(
+          "phase-plot",
+          [
+            { x: time, y: V_L1, name: "L1", line: { color: "#e74c3c" } },
+            { x: time, y: V_L2, name: "L2", line: { color: "#2ecc71" } },
+            { x: time, y: V_L3, name: "L3", line: { color: "#3498db" } },
+          ],
+          {
+            title: "Tensions Triphasées (50Hz)",
+            xaxis: { title: "Temps (s)", gridcolor: "rgba(255,255,255,0.1)" },
+            yaxis: { title: "Tension (V)", gridcolor: "rgba(255,255,255,0.1)" },
+            plot_bgcolor: "rgba(0,0,0,0)",
+            paper_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "white" },
+            showlegend: true,
+          }
+        );
+      }
+
+      function calculatePower(phaseAngleV, phaseAngleI) {
+        const Vrms = config.amplitude / Math.sqrt(2);
+        const Irms = config.current;
+        return {
+          active: 3 * Vrms * Irms * Math.cos(phaseAngleV - phaseAngleI),
+          reactive: 3 * Vrms * Irms * Math.sin(phaseAngleV - phaseAngleI),
+          apparent: 3 * Vrms * Irms,
+        };
+      }
+
+      function updateAllValues(t) {
+        const instantIndex =
+          Math.floor((t * config.points) / (2 * Math.PI)) % config.points;
+
+        // Mise à jour des tensions
+        document.getElementById("l1-value").textContent =
+          V_L1[instantIndex].toFixed(1);
+        document.getElementById("l2-value").textContent =
+          V_L2[instantIndex].toFixed(1);
+        document.getElementById("l3-value").textContent =
+          V_L3[instantIndex].toFixed(1);
+
+        // Mise à jour des courants
+        document.getElementById("i1-value").textContent =
+          I_L1[instantIndex].toFixed(1) + " A";
+        document.getElementById("i2-value").textContent =
+          I_L2[instantIndex].toFixed(1) + " A";
+        document.getElementById("i3-value").textContent =
+          I_L3[instantIndex].toFixed(1) + " A";
+
+        // Calcul des tensions composées
+        const V12 =
+          (V_L1[instantIndex] - V_L2[instantIndex]) *
+          (Math.sqrt(3) / Math.sqrt(2));
+        const V23 =
+          (V_L2[instantIndex] - V_L3[instantIndex]) *
+          (Math.sqrt(3) / Math.sqrt(2));
+        const V31 =
+          (V_L3[instantIndex] - V_L1[instantIndex]) *
+          (Math.sqrt(3) / Math.sqrt(2));
+
+        document.getElementById("v12-value").textContent = `${Math.abs(
+          V12
+        ).toFixed(1)} V`;
+        document.getElementById("v23-value").textContent = `${Math.abs(
+          V23
+        ).toFixed(1)} V`;
+        document.getElementById("v31-value").textContent = `${Math.abs(
+          V31
+        ).toFixed(1)} V`;
+
+        // Calcul des angles
+        const angle = (t * 180) / Math.PI;
+        document.getElementById("l1-angle").textContent = `${(
+          angle % 360
+        ).toFixed(1)}°`;
+        document.getElementById("l2-angle").textContent = `${(
+          (angle % 360) -
+          120
+        ).toFixed(1)}°`;
+        document.getElementById("l3-angle").textContent = `${(
+          (angle % 360) +
+          120
+        ).toFixed(1)}°`;
+
+        // Calcul des cosφ interphases
+        const cosPhiL1L2 = Math.cos(
+          Math.atan2(I_L2[instantIndex], V_L1[instantIndex]) -
+            Math.atan2(I_L1[instantIndex], V_L2[instantIndex])
+        );
+        const cosPhiL2L3 = Math.cos(
+          Math.atan2(I_L3[instantIndex], V_L2[instantIndex]) -
+            Math.atan2(I_L2[instantIndex], V_L3[instantIndex])
+        );
+        const cosPhiL3L1 = Math.cos(
+          Math.atan2(I_L1[instantIndex], V_L3[instantIndex]) -
+            Math.atan2(I_L3[instantIndex], V_L1[instantIndex])
+        );
+
+        document.getElementById("cosphi-l1l2").textContent =
+          Math.abs(cosPhiL1L2).toFixed(2);
+        document.getElementById("cosphi-l2l3").textContent =
+          Math.abs(cosPhiL2L3).toFixed(2);
+        document.getElementById("cosphi-l3l1").textContent =
+          Math.abs(cosPhiL3L1).toFixed(2);
+
+        // Calcul des puissances
+        const power = calculatePower(t, Math.acos(config.powerFactor));
+        document.getElementById("active-power").textContent = `${(
+          power.active / 1000
+        ).toFixed(2)} kW`;
+        document.getElementById("reactive-power").textContent = `${(
+          power.reactive / 1000
+        ).toFixed(2)} kVAR`;
+        document.getElementById("apparent-power").textContent = `${(
+          power.apparent / 1000
+        ).toFixed(2)} kVA`;
+      }
+
+      function animate(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+
+        if (elapsed - lastUpdateTime > 16) {
+          const t =
+            (elapsed / 1000) *
+            config.animationSpeed *
+            2 *
+            Math.PI *
+            config.frequency;
+
+          // Mise à jour des tensions
+          V_L1 = time.map(
+            (x) =>
+              config.amplitude *
+              Math.sin(2 * Math.PI * config.frequency * x + t)
+          );
+          V_L2 = time.map(
+            (x) =>
+              config.amplitude *
+              Math.sin(
+                2 * Math.PI * config.frequency * x - config.phaseShift + t
+              )
+          );
+          V_L3 = time.map(
+            (x) =>
+              config.amplitude *
+              Math.sin(
+                2 * Math.PI * config.frequency * x + config.phaseShift + t
+              )
+          );
+
+          // Mise à jour des courants avec variation
+          const currentPhaseShift =
+            Math.acos(config.powerFactor) +
+            (Math.random() * config.imbalance - config.imbalance / 2);
+          I_L1 = time.map(
+            (x) =>
+              config.current *
+              Math.sqrt(2) *
+              Math.sin(2 * Math.PI * config.frequency * x - currentPhaseShift)
+          );
+          I_L2 = time.map(
+            (x) =>
+              config.current *
+              Math.sqrt(2) *
+              Math.sin(
+                2 * Math.PI * config.frequency * x -
+                  config.phaseShift -
+                  currentPhaseShift
+              )
+          );
+          I_L3 = time.map(
+            (x) =>
+              config.current *
+              Math.sqrt(2) *
+              Math.sin(
+                2 * Math.PI * config.frequency * x +
+                  config.phaseShift -
+                  currentPhaseShift
+              )
+          );
+
+          Plotly.animate(
+            "phase-plot",
+            {
+              data: [{ y: V_L1 }, { y: V_L2 }, { y: V_L3 }],
+              traces: [0, 1, 2],
+            },
+            { transition: { duration: 0 } }
+          );
+
+          Plotly.react(
+            "vector-plot",
+            [
+              {
+                x: [0, Math.cos(t)],
+                y: [0, Math.sin(t)],
+                name: "L1",
+                line: { color: "#e74c3c" },
+              },
+              {
+                x: [0, Math.cos(t - config.phaseShift)],
+                y: [0, Math.sin(t - config.phaseShift)],
+                name: "L2",
+                line: { color: "#2ecc71" },
+              },
+              {
+                x: [0, Math.cos(t + config.phaseShift)],
+                y: [0, Math.sin(t + config.phaseShift)],
+                name: "L3",
+                line: { color: "#3498db" },
+              },
+            ],
+            vectorLayout
+          );
+
+          updateAllValues(t);
+          lastUpdateTime = elapsed;
+        }
+        animationId = requestAnimationFrame(animate);
+      }
+
+      function startAnimation() {
+        if (!animationId) {
+          startTime = null;
+          lastUpdateTime = 0;
+          animationId = requestAnimationFrame(animate);
+        }
+      }
+
+      function pauseAnimation() {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+
+      function resetAnimation() {
+        pauseAnimation();
+        initData();
+        Plotly.purge("phase-plot");
+        Plotly.purge("vector-plot");
+        createPhasePlot();
+        createVectorPlot(0);
+        updateAllValues(0);
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        initData();
+        createPhasePlot();
+        updateAllValues(0);
+        startAnimation();
+      });
+
+      document
+        .getElementById("play-btn")
+        .addEventListener("click", startAnimation);
+      document
+        .getElementById("pause-btn")
+        .addEventListener("click", pauseAnimation);
+      document
+        .getElementById("reset-btn")
+        .addEventListener("click", resetAnimation);
+    </script>
+
+    <script src="assets/js/main.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- ====== ionicons ======= -->
+    <script
+      type="module"
+      src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"
+    ></script>
+    <script
+      nomodule
+      src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"
+    ></script>
+  </body>
+</html>

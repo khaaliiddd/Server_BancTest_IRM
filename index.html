@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quantum Secure Auth</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/boxicons@2.0.5/css/boxicons.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --quantum-dark: #0c0e1d;
+        --neon-purple: #8a2be2;
+        --electric-blue: #00f5ff;
+        --cyber-pink: #ff00aa;
+        --matrix-green: #00ff41;
+        --dark-panel: #161a2e;
+        --glow-effect: 0 0 10px rgba(138, 43, 226, 0.7);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Roboto", sans-serif;
+      }
+
+      body {
+        background-color: var(--quantum-dark);
+        color: white;
+        height: 100vh;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Cyber Glow Effects */
+      .cyber-glow {
+        position: absolute;
+        width: 300px;
+        height: 300px;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.15;
+        z-index: -1;
+      }
+
+      .glow-1 {
+        background: var(--neon-purple);
+        top: -150px;
+        left: -150px;
+      }
+
+      .glow-2 {
+        background: var(--electric-blue);
+        bottom: -150px;
+        right: -150px;
+      }
+
+      /* Header Style */
+      .cyber-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 40px;
+        border-bottom: 1px solid rgba(138, 43, 226, 0.3);
+        background: rgba(12, 14, 29, 0.8);
+        backdrop-filter: blur(10px);
+      }
+
+      .logo-title {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .logo-title h1 {
+        font-family: "Orbitron", sans-serif;
+        font-weight: 700;
+        font-size: 1.8rem;
+        background: linear-gradient(
+          90deg,
+          var(--neon-purple),
+          var(--electric-blue)
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        letter-spacing: 1px;
+        text-shadow: 0 0 10px rgba(138, 43, 226, 0.3);
+      }
+
+      .security-badge {
+        background: rgba(0, 245, 255, 0.1);
+        border: 1px solid var(--electric-blue);
+        border-radius: 20px;
+        padding: 8px 15px;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .security-badge i {
+        color: var(--matrix-green);
+      }
+
+      /* Main Container */
+      .auth-container {
+        display: flex;
+        height: calc(100vh - 80px);
+        width: 100%;
+      }
+
+      /* Visual Panel */
+      .visual-panel {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .image-combo {
+        display: flex;
+        align-items: center;
+        height: 60%;
+        position: relative;
+      }
+      .image-wrapper {
+        width: 300px;
+        background-color: #ff0000;
+        height: 250px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 10px;
+        box-shadow: var(--glow-effect);
+        padding: 10px;
+      }
+
+      .auth-image {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        transition: all 0.5s ease;
+      }
+
+      .auth-image:hover {
+        transform: scale(1.05);
+      }
+
+      .image-divider {
+        width: 3px;
+        height: 80%;
+        background: linear-gradient(
+          to bottom,
+          transparent,
+          var(--electric-blue),
+          transparent
+        );
+        margin: 0 20px;
+        position: relative;
+      }
+
+      .image-divider::after {
+        content: "Et";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--quantum-dark);
+        color: var(--matrix-green);
+        font-family: "Orbitron", sans-serif;
+        font-size: 0.8rem;
+        padding: 5px 10px;
+        border-radius: 20px;
+        border: 1px solid var(--matrix-green);
+      }
+
+      /* Form Panel */
+      .form-panel {
+        width: 450px;
+        background: var(--dark-panel);
+        padding: 40px;
+        border-left: 1px solid rgba(138, 43, 226, 0.3);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .form-header {
+        margin-bottom: 30px;
+        text-align: center;
+      }
+
+      .form-title {
+        font-family: "Orbitron", sans-serif;
+        font-size: 1.8rem;
+        margin-bottom: 10px;
+        background: linear-gradient(
+          90deg,
+          var(--cyber-pink),
+          var(--electric-blue)
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .form-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+      }
+
+      /* Form Elements */
+      .input-group {
+        margin-bottom: 20px;
+        position: relative;
+      }
+
+      .input-icon {
+        position: absolute;
+        top: 50%;
+        left: 15px;
+        transform: translateY(-50%);
+        color: var(--electric-blue);
+      }
+
+      .auth-input {
+        width: 100%;
+        padding: 15px 15px 15px 45px;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(138, 43, 226, 0.3);
+        border-radius: 8px;
+        color: white;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+      }
+
+      .auth-input:focus {
+        outline: none;
+        border-color: var(--electric-blue);
+        box-shadow: 0 0 0 2px rgba(0, 245, 255, 0.2);
+      }
+
+      .password-toggle {
+        position: absolute;
+        top: 50%;
+        right: 15px;
+        transform: translateY(-50%);
+        color: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+      }
+
+      .form-options {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        font-size: 0.9rem;
+      }
+
+      .remember-me {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .remember-me input {
+        accent-color: var(--electric-blue);
+      }
+
+      .forgot-password {
+        color: var(--electric-blue);
+        text-decoration: none;
+      }
+
+      .auth-button {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(
+          90deg,
+          var(--neon-purple),
+          var(--cyber-pink)
+        );
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        font-size: 1rem;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s ease;
+        margin-bottom: 25px;
+      }
+
+      .auth-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(138, 43, 226, 0.4);
+      }
+
+      .form-footer {
+        text-align: center;
+        font-size: 0.9rem;
+      }
+
+      .form-footer a {
+        color: var(--electric-blue);
+        text-decoration: none;
+        font-weight: 500;
+        margin-left: 5px;
+      }
+
+      /* Status Bar */
+      .status-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 10px 40px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        border-top: 1px solid rgba(138, 43, 226, 0.3);
+      }
+
+      .status-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .status-item i {
+        color: var(--matrix-green);
+      }
+
+      /* Message Styles */
+      .messageDiv {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+        display: none;
+      }
+
+      .messageDiv.error {
+        background: rgba(255, 0, 0, 0.1);
+        border-left: 4px solid red;
+        color: #ff4d4f;
+        display: block;
+      }
+
+      .messageDiv.success {
+        background: rgba(0, 255, 0, 0.1);
+        border-left: 4px solid var(--matrix-green);
+        color: var(--matrix-green);
+        display: block;
+      }
+
+      /* Responsive Adjustments */
+      @media (max-width: 1200px) {
+        .auth-image {
+          width: 200px;
+          height: 250px;
+        }
+      }
+
+      @media (max-width: 992px) {
+        .visual-panel {
+          display: none;
+        }
+
+        .form-panel {
+          width: 100%;
+          max-width: 500px;
+          margin: 0 auto;
+          border-left: none;
+        }
+      }
+      /*========================  section social  ======================*/
+      .social-media-section {
+        margin-top: 25px;
+        text-align: center;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 20px;
+      }
+
+      .social-title {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.8rem;
+        margin-bottom: 15px;
+        letter-spacing: 0.5px;
+      }
+
+      .social-icons-container {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+      }
+
+      .social-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .social-icon::before {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          135deg,
+          var(--neon-purple),
+          var(--electric-blue)
+        );
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: -1;
+      }
+
+      .social-icon:hover::before {
+        opacity: 1;
+      }
+
+      /* Individual icon colors */
+      .facebook {
+        background: rgba(59, 89, 152, 0.2);
+        border: 1px solid rgba(59, 89, 152, 0.5);
+      }
+      .twitter {
+        background: rgba(29, 161, 242, 0.2);
+        border: 1px solid rgba(29, 161, 242, 0.5);
+      }
+      .google {
+        background: rgba(219, 68, 55, 0.2);
+        border: 1px solid rgba(219, 68, 55, 0.5);
+      }
+      .linkedin {
+        background: rgba(40, 103, 178, 0.2);
+        border: 1px solid rgba(40, 103, 178, 0.5);
+      }
+
+      /* Hover effects */
+      .social-icon:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        border-color: transparent;
+      }
+
+      .facebook:hover {
+        color: #3b5998;
+      }
+      .twitter:hover {
+        color: #1da1f2;
+      }
+      .google:hover {
+        color: #db4437;
+      }
+      .linkedin:hover {
+        color: #0a66c2;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Cyber Glow Effects -->
+    <div class="cyber-glow glow-1"></div>
+    <div class="cyber-glow glow-2"></div>
+
+    <!-- Header -->
+    <header class="cyber-header">
+      <div class="logo-title">
+        <i
+          class="fas fa-shield-alt"
+          style="color: var(--electric-blue); font-size: 1.8rem"
+        ></i>
+        <h1>BANC TEST IRM</h1>
+      </div>
+      <div class="security-badge">
+        <i class="fas fa-lock"></i>
+        <span>256-BIT ENCRYPTION</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="auth-container">
+      <!-- Visual Panel -->
+      <div class="visual-panel">
+        <div class="image-combo">
+          <div class="image-wrapper">
+            <img
+              src="https://i.imgur.com/JHx6Ud8.png"
+              alt="Cyber Security"
+              class="auth-image"
+            />
+          </div>
+          <div class="image-divider"></div>
+          <div class="image-wrapper">
+            <img
+              src="https://i.imgur.com/D4Uo9eW.png"
+              alt="Future Tech"
+              class="auth-image"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Panel -->
+      <div class="form-panel">
+        <!-- Sign In Form (Visible by default) -->
+        <form action="" class="login__registre" id="login-in">
+          <div
+            id="signInMessage"
+            class="messageDiv"
+            style="display: none"
+          ></div>
+
+          <div class="form-header">
+            <h2 class="form-title">ACCESS PORTAL</h2>
+            <p class="form-subtitle">Secure authentication required</p>
+          </div>
+
+          <div class="input-group">
+            <i class="fas fa-user input-icon"></i>
+            <input
+              type="text"
+              id="Username1"
+              placeholder="Username"
+              class="auth-input"
+            />
+          </div>
+
+          <div class="input-group">
+            <i class="fas fa-key input-icon"></i>
+            <input
+              type="password"
+              id="Password1"
+              placeholder="Password"
+              class="auth-input"
+            />
+            <i class="fas fa-eye password-toggle"></i>
+          </div>
+
+          <div class="form-options">
+            <label class="remember-me">
+              <input type="checkbox" />
+              <span>Remember device</span>
+            </label>
+            <a href="#" class="forgot-password">Forget Password</a>
+          </div>
+
+          <button class="auth-button" id="submitSignIn">
+            <span>AUTHENTICATE</span>
+            <i class="fas fa-fingerprint"></i>
+          </button>
+
+          <div class="form-footer">
+            <span>Don't have an Account ?</span>
+            <a href="#" id="signUpButton">Sign Up</a>
+          </div>
+          <!-- Social Media Icons -->
+          <div class="social-media-section">
+            <p class="social-title">Connect with us</p>
+            <div class="social-icons-container">
+              <a href="#" class="social-icon facebook">
+                <i class="fab fa-facebook-f"></i>
+              </a>
+              <a href="#" class="social-icon twitter">
+                <i class="fab fa-twitter"></i>
+              </a>
+              <a href="#" class="social-icon google">
+                <i class="fab fa-google"></i>
+              </a>
+              <a href="#" class="social-icon linkedin">
+                <i class="fab fa-linkedin-in"></i>
+              </a>
+            </div>
+          </div>
+        </form>
+
+        <!-- Sign Up Form (Hidden by default) -->
+        <form
+          action=""
+          class="login__create"
+          id="login-up"
+          style="display: none"
+        >
+          <div
+            id="signUpMessage"
+            class="messageDiv"
+            style="display: none"
+          ></div>
+
+          <div class="form-header">
+            <h2 class="form-title">CREATE ACCOUNT</h2>
+            <p class="form-subtitle">Join our secure network</p>
+          </div>
+
+          <div class="input-group">
+            <i class="bx bx-user input-icon"></i>
+            <input
+              type="text"
+              id="Username"
+              placeholder="Username"
+              class="auth-input"
+            />
+          </div>
+
+          <div class="input-group">
+            <i class="bx bx-at input-icon"></i>
+            <input
+              type="text"
+              id="Email"
+              placeholder="Email"
+              class="auth-input"
+            />
+          </div>
+
+          <div class="input-group">
+            <i class="bx bx-lock-alt input-icon"></i>
+            <input
+              type="password"
+              id="Password"
+              placeholder="Password"
+              class="auth-input"
+            />
+            <i class="fas fa-eye password-toggle"></i>
+          </div>
+
+          <button class="auth-button" id="submitSignUp">
+            <span>REGISTER</span>
+            <i class="fas fa-user-plus"></i>
+          </button>
+
+          <div class="form-footer">
+            <span>Already have an Account ?</span>
+            <a id="signInButton">Sign In</a>
+          </div>
+          <!-- Social Media Icons -->
+          <div class="social-media-section">
+            <p class="social-title">Connect with us</p>
+            <div class="social-icons-container">
+              <a href="#" class="social-icon facebook">
+                <i class="fab fa-facebook-f"></i>
+              </a>
+              <a href="#" class="social-icon twitter">
+                <i class="fab fa-twitter"></i>
+              </a>
+              <a href="#" class="social-icon google">
+                <i class="fab fa-google"></i>
+              </a>
+              <a href="#" class="social-icon linkedin">
+                <i class="fab fa-linkedin-in"></i>
+              </a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <footer class="status-bar">
+      <div class="status-item">
+        <i class="fas fa-server"></i>
+        <span> SERVER</span>
+      </div>
+      <div class="status-item">
+        <i class="fas fa-shield-alt"></i>
+        <span>Developed by Khalid Essahnouny</span>
+      </div>
+      <div class="status-item">
+        <i class="fas fa-clock"></i>
+        <span id="real-time">SYNC: 100%</span>
+      </div>
+    </footer>
+
+    <script>
+      // Real-time clock update
+      function updateClock() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString("en-US", {
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        document.getElementById("real-time").textContent = `TIME: ${timeStr}`;
+      }
+      setInterval(updateClock, 1000);
+      updateClock();
+
+      // Password toggle
+      document
+        .querySelector(".password-toggle")
+        .addEventListener("click", function () {
+          const passwordInput = document.getElementById("Password1");
+          if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            this.classList.replace("fa-eye", "fa-eye-slash");
+          } else {
+            passwordInput.type = "password";
+            this.classList.replace("fa-eye-slash", "fa-eye");
+          }
+        });
+      // Toggle between Sign In and Sign Up forms
+      document
+        .getElementById("signUpButton")
+        .addEventListener("click", function (e) {
+          e.preventDefault();
+          document.getElementById("login-in").style.display = "none";
+          document.getElementById("login-up").style.display = "block";
+        });
+
+      document
+        .getElementById("signInButton")
+        .addEventListener("click", function (e) {
+          e.preventDefault();
+          document.getElementById("login-up").style.display = "none";
+          document.getElementById("login-in").style.display = "block";
+        });
+    </script>
+
+    <!--===== MAIN JS =====-->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+      import {
+        getAuth,
+        createUserWithEmailAndPassword,
+        signInWithEmailAndPassword,
+      } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+      import {
+        getDatabase,
+        ref,
+        set,
+        get,
+        query,
+        orderByChild,
+        equalTo,
+      } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-database.js";
+
+      // Configuration Firebase
+      const firebaseConfig = {
+        apiKey: "AIzaSyB-rXyBq9DL8glphmiB6xp-C6KTRaONWw8",
+        authDomain: "data-marine.firebaseapp.com",
+        databaseURL: "https://data-marine-default-rtdb.firebaseio.com",
+        projectId: "data-marine",
+        storageBucket: "data-marine.firebasestorage.app",
+        messagingSenderId: "565193309047",
+        appId: "1:565193309047:web:6e328f3cdc18758de5ff72",
+      };
+
+      // Initialisation Firebase
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth();
+      const db = getDatabase();
+
+      // Fonction pour afficher les messages
+      function showMessage(message, divId, isError = false) {
+        const messageDiv = document.getElementById(divId);
+        messageDiv.textContent = message;
+        messageDiv.style.display = "block";
+        messageDiv.style.color = isError ? "#dc3545" : "#28a745";
+        messageDiv.style.padding = "10px";
+        messageDiv.style.margin = "10px 0";
+        messageDiv.style.borderRadius = "4px";
+        messageDiv.style.backgroundColor = isError ? "#f8d7da" : "#d4edda";
+        messageDiv.style.border = isError
+          ? "1px solid #f5c6cb"
+          : "1px solid #c3e6cb";
+
+        setTimeout(() => {
+          messageDiv.style.opacity = "0";
+          setTimeout(() => (messageDiv.style.display = "none"), 500);
+        }, 5000);
+      }
+
+      // Inscription
+      document
+        .getElementById("submitSignUp")
+        .addEventListener("click", async (e) => {
+          e.preventDefault();
+
+          const email = document.getElementById("Email").value;
+          const password = document.getElementById("Password").value;
+          const username = document.getElementById("Username").value;
+
+          // Validation
+          if (!email || !password || !username) {
+            showMessage(
+              "Tous les champs sont obligatoires",
+              "signUpMessage",
+              true
+            );
+            return;
+          }
+
+          // Vérification format email
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            showMessage("Format d'email invalide", "signUpMessage", true);
+            return;
+          }
+
+          try {
+            // Vérifie si le username existe déjà
+            const usernameRef = ref(
+              db,
+              `usernames/${username.replace(".", "_dot_")}`
+            );
+            const usernameSnapshot = await get(usernameRef);
+
+            if (usernameSnapshot.exists()) {
+              showMessage(
+                "Ce nom d'utilisateur existe déjà",
+                "signUpMessage",
+                true
+              );
+              return;
+            }
+
+            // Crée le compte utilisateur
+            const userCredential = await createUserWithEmailAndPassword(
+              auth,
+              email,
+              password
+            );
+            const user = userCredential.user;
+
+            // Enregistre les données utilisateur
+            await set(ref(db, `users/${user.uid}`), {
+              email,
+              username,
+              createdAt: new Date().toISOString(),
+            });
+
+            // Crée une entrée dans la table usernames pour la recherche
+            await set(ref(db, `usernames/${username.replace(".", "_dot_")}`), {
+              uid: user.uid,
+            });
+
+            showMessage(
+              "Compte créé avec succès! Redirection...",
+              "signUpMessage"
+            );
+            setTimeout(() => (window.location.href = "index.html"), 1500);
+          } catch (error) {
+            let errorMessage = "Erreur lors de l'inscription";
+            switch (error.code) {
+              case "auth/email-already-in-use":
+                errorMessage = "Cet email est déjà utilisé";
+                break;
+              case "auth/invalid-email":
+                errorMessage = "Email invalide";
+                break;
+              case "auth/weak-password":
+                errorMessage =
+                  "Le mot de passe doit faire au moins 6 caractères";
+                break;
+            }
+            showMessage(errorMessage, "signUpMessage", true);
+            console.error("Erreur complète:", error);
+          }
+        });
+
+      // Connexion
+      document
+        .getElementById("submitSignIn")
+        .addEventListener("click", async (e) => {
+          e.preventDefault();
+
+          const username = document.getElementById("Username1").value;
+          const password = document.getElementById("Password1").value;
+
+          if (!username || !password) {
+            showMessage("Identifiants requis", "signInMessage", true);
+            return;
+          }
+
+          try {
+            // Recherche dans la table usernames
+            const usernameRef = ref(
+              db,
+              `usernames/${username.replace(".", "_dot_")}`
+            );
+            const usernameSnapshot = await get(usernameRef);
+
+            if (!usernameSnapshot.exists()) {
+              showMessage("Identifiants incorrects", "signInMessage", true);
+              return;
+            }
+
+            // Récupère l'UID associé au username
+            const uid = usernameSnapshot.val().uid;
+
+            // Récupère les données utilisateur
+            const userSnapshot = await get(ref(db, `users/${uid}`));
+            const userData = userSnapshot.val();
+
+            // Authentification
+            await signInWithEmailAndPassword(auth, userData.email, password);
+
+            showMessage("Connexion réussie! Redirection...", "signInMessage");
+            localStorage.setItem(
+              "user",
+              JSON.stringify({
+                username,
+                email: userData.email,
+                uid: uid,
+              })
+            );
+            setTimeout(() => (window.location.href = "homepage.html"), 1500);
+          } catch (error) {
+            let errorMessage = "Erreur de connexion";
+            switch (error.code) {
+              case "auth/wrong-password":
+                errorMessage = "Mot de passe incorrect";
+                break;
+              case "auth/user-not-found":
+                errorMessage = "Utilisateur introuvable";
+                break;
+            }
+            showMessage(errorMessage, "signInMessage", true);
+            console.error("Erreur complète:", error);
+          }
+        });
+    </script>
+    <!-- <script src="assets1/js/main.js"></script> -->
+  </body>
+</html>

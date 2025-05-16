@@ -1,0 +1,4 @@
+node_modules/
+.env
+alarms.json
+*.log

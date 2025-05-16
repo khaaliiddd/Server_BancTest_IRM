@@ -186,3 +186,15 @@ app.listen(PORT, () => {
     initPuppeteer();
   }
 });
+
+module.exports = app;
+
+// Démarrage local (ne s'exécutera pas sur Vercel)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Serveur démarré sur http://localhost:${PORT}`);
+    if (process.env.NODE_ENV !== "test") {
+      initPuppeteer(); // À supprimer si vous gardez Puppeteer
+    }
+  });
+}

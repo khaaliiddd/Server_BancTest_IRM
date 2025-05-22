@@ -750,7 +750,7 @@ function startMonitoring() {
     // Vérification des tensions triphasées
     ["v1", "v2", "v3"].forEach((v, idx) => {
       const phase = `V${idx + 1}`;
-      const value = compData[v];
+      const value = coolingData[v];
       if (
         value < CRITICAL_THRESHOLDS.COOLING[phase].min ||
         value > CRITICAL_THRESHOLDS.COOLING[phase].max
@@ -1010,15 +1010,16 @@ function triggerAlarm(equipment, param, value, message, severity) {
   }
 
   updateAlarmDisplay();
-  if (severity === "critical") {
-    sendAlertSMS(alarm);
-  }
+
+  // if (severity === "critical") {
+  //   sendAlertSMS(newAlarm);
+  // }
   //=================================================================
 
   // Envoi d'email pour les alarmes critiques
-  // if (severity === "critical") {
-  // sendAlarmEmail(alarm);
-  // }
+  if (severity === "critical") {
+    sendAlarmEmail(newAlarm);
+  }
 }
 
 // Fonction d'envoi SMS modifiée
